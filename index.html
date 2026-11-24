@@ -1,0 +1,3653 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Anatomia 3D — 인체 해부학 아틀라스</title>
+    <meta
+      name="description"
+      content="3D 인체 모형과 내부 장기를 탐색하고, 터치 시 각 기관의 명칭, 생리적 기능, 의학용어를 학습하는 인터랙티브 해부학 앱"
+    />
+    <meta property="og:title" content="Anatomia 3D — 인체 해부학 아틀라스" />
+    <meta
+      property="og:description"
+      content="3D 인체 모형과 내부 장기를 탐색하고, 터치 시 각 기관의 명칭, 생리적 기능, 의학용어를 학습하는 인터랙티브 해부학 앱"
+    />
+    <meta property="og:type" content="website" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-canvas: #090d16;
+        --bg-panel: rgba(14, 21, 37, 0.95);
+        --bg-panel-soft: rgba(14, 21, 37, 0.88);
+        --bg-btn: rgba(30, 41, 59, 0.72);
+        --bg-btn-hover: rgba(51, 65, 85, 0.92);
+        --border-subtle: rgba(71, 85, 105, 0.52);
+        --border-divider: rgba(30, 41, 59, 0.92);
+        --text-primary: #f8fafc;
+        --text-secondary: #cbd5e1;
+        --text-muted: #94a3b8;
+        --accent-sky: #38bdf8;
+        --accent-sky-soft: #7dd3fc;
+        --font-display: "Plus Jakarta Sans", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --font-sans: "Noto Sans KR", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: var(--bg-canvas);
+        color: var(--text-primary);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button,
+      input {
+        font-family: inherit;
+      }
+
+      .app-root {
+        position: fixed;
+        inset: 0;
+        width: 100dvw;
+        height: 100dvh;
+        overflow: hidden;
+        background: var(--bg-canvas);
+      }
+
+      #viewport {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      #viewport canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+
+      .fallback-screen {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        text-align: center;
+        background: var(--bg-canvas);
+        z-index: 50;
+      }
+
+      .fallback-screen h2 {
+        margin: 0 0 8px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .fallback-screen p {
+        margin: 0;
+        font-size: 14px;
+        color: var(--text-muted);
+        max-width: 420px;
+        line-height: 1.6;
+      }
+
+      /* Custom Scrollbar */
+      .anatomy-scroll::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+      }
+      .anatomy-scroll::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .anatomy-scroll::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.28);
+        border-radius: 9999px;
+      }
+      .anatomy-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(148, 163, 184, 0.48);
+      }
+
+      /* Top-left Header */
+      .app-header {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        z-index: 10;
+        max-width: calc(100vw - 32px);
+        pointer-events: none;
+        user-select: none;
+      }
+
+      .header-card {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        background: var(--bg-panel-soft);
+        border: 1px solid var(--border-subtle);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      }
+
+      .header-titles {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .header-title-row {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+
+      .brand-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        white-space: nowrap;
+      }
+
+      .brand-sub {
+        font-size: 12px;
+        color: var(--text-muted);
+        white-space: nowrap;
+      }
+
+      .header-hint {
+        margin: 3px 0 0;
+        font-size: 11px;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .download-btn {
+        pointer-events: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 32px;
+        padding: 0 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(71, 85, 105, 0.65);
+        background: rgba(30, 41, 59, 0.9);
+        color: var(--accent-sky-soft);
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        flex-shrink: 0;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+
+      .download-btn:hover {
+        background: rgba(51, 65, 85, 0.95);
+        color: #bae6fd;
+      }
+
+      /* Hover Tooltip */
+      .hover-tooltip {
+        position: fixed;
+        z-index: 40;
+        pointer-events: none;
+        padding: 6px 12px;
+        border-radius: 8px;
+        background: rgba(14, 21, 37, 0.96);
+        border: 1px solid rgba(100, 116, 139, 0.65);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .dot-swatch {
+        width: 8px;
+        height: 8px;
+        border-radius: 9999px;
+        flex-shrink: 0;
+      }
+
+      .tooltip-ko {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-primary);
+        white-space: nowrap;
+      }
+
+      .tooltip-en {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--accent-sky);
+        white-space: nowrap;
+      }
+
+      /* Organ Inspector Drawer */
+      .inspector {
+        position: fixed;
+        z-index: 20;
+        top: 16px;
+        right: 16px;
+        bottom: 118px;
+        width: 392px;
+        max-width: calc(100vw - 32px);
+        display: flex;
+        flex-direction: column;
+        border-radius: 12px;
+        background: var(--bg-panel);
+        border: 1px solid var(--border-subtle);
+        box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55);
+        overflow: hidden;
+      }
+
+      .inspector-head {
+        padding: 18px 20px 14px;
+        border-bottom: 1px solid var(--border-divider);
+        flex-shrink: 0;
+      }
+
+      .inspector-top-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .inspector-meta {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 5px;
+      }
+
+      .inspector-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.25;
+        color: var(--text-primary);
+      }
+
+      .inspector-latin {
+        margin: 4px 0 0;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--accent-sky);
+      }
+
+      .inspector-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      .btn-focus,
+      .btn-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        height: 36px;
+        border-radius: 8px;
+        border: none;
+        background: rgba(30, 41, 59, 0.9);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+
+      .btn-focus {
+        padding: 0 12px;
+      }
+
+      .btn-close {
+        width: 36px;
+      }
+
+      .btn-focus:hover,
+      .btn-close:hover {
+        background: var(--bg-btn-hover);
+        color: #ffffff;
+      }
+
+      .inspector-summary {
+        margin: 12px 0 0;
+        font-size: 13.5px;
+        line-height: 1.65;
+        color: var(--text-secondary);
+      }
+
+      .inspector-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 20px 20px;
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        padding-bottom: 16px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border-divider);
+      }
+
+      .metric-label {
+        font-size: 11px;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .metric-value {
+        margin-top: 3px;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .section-heading {
+        margin: 0 0 10px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: var(--text-secondary);
+      }
+
+      .fn-list {
+        list-style: none;
+        margin: 0 0 22px;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .fn-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 13.5px;
+        line-height: 1.65;
+        color: #e2e8f0;
+      }
+
+      .fn-num {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 11.5px;
+        color: var(--accent-sky);
+        margin-top: 3px;
+        flex-shrink: 0;
+      }
+
+      .terms-list {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 18px;
+      }
+
+      .term-row {
+        padding: 11px 0;
+        border-bottom: 1px solid var(--border-divider);
+      }
+
+      .term-row:first-child {
+        padding-top: 2px;
+      }
+
+      .term-row:last-child {
+        border-bottom: none;
+        padding-bottom: 2px;
+      }
+
+      .term-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .term-en {
+        font-family: var(--font-display);
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--accent-sky-soft);
+      }
+
+      .term-ko {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      .term-meaning {
+        margin: 5px 0 0;
+        font-size: 12px;
+        line-height: 1.6;
+        color: var(--text-muted);
+      }
+
+      .related-section {
+        padding-top: 14px;
+        border-top: 1px solid var(--border-divider);
+      }
+
+      .related-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .related-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 32px;
+        padding: 0 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(71, 85, 105, 0.55);
+        background: rgba(30, 41, 59, 0.8);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+
+      .related-btn:hover {
+        background: var(--bg-btn-hover);
+        color: #ffffff;
+      }
+
+      /* Bottom Control Dock */
+      .dock-wrap {
+        position: fixed;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 20;
+        width: max-content;
+        max-width: min(980px, 95vw);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        pointer-events: none;
+      }
+
+      .directory-popover {
+        pointer-events: auto;
+        width: 100%;
+        max-width: 680px;
+        margin-bottom: 8px;
+        padding: 12px;
+        border-radius: 12px;
+        background: rgba(14, 21, 37, 0.97);
+        border: 1px solid var(--border-subtle);
+        box-shadow: 0 20px 44px rgba(0, 0, 0, 0.55);
+      }
+
+      .directory-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 4px 8px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid var(--border-divider);
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+
+      .directory-close {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .directory-close:hover {
+        color: var(--text-primary);
+      }
+
+      .directory-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      .dir-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: rgba(30, 41, 59, 0.65);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 500;
+        text-align: left;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+      }
+
+      .dir-item:hover {
+        background: rgba(30, 41, 59, 0.95);
+        color: #ffffff;
+      }
+
+      .dir-item.active {
+        background: rgba(56, 189, 248, 0.18);
+        border-color: rgba(56, 189, 248, 0.5);
+        color: #bae6fd;
+      }
+
+      .dir-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .dock-toggle {
+        pointer-events: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 28px;
+        padding: 0 14px;
+        margin-bottom: 6px;
+        border-radius: 8px 8px 6px 6px;
+        border: 1px solid var(--border-subtle);
+        background: rgba(14, 21, 37, 0.94);
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+      }
+
+      .dock-toggle:hover {
+        background: rgba(30, 41, 59, 0.96);
+      }
+
+      .dock-panel {
+        pointer-events: auto;
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 12px;
+        background: var(--bg-panel);
+        border: 1px solid var(--border-subtle);
+        box-shadow: 0 20px 44px rgba(0, 0, 0, 0.55);
+        transition: transform 0.2s ease, opacity 0.2s ease;
+      }
+
+      .dock-panel.collapsed {
+        display: none;
+      }
+
+      .dock-row-1 {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+
+      .dock-divider {
+        width: 1px;
+        height: 20px;
+        background: rgba(71, 85, 105, 0.65);
+        margin: 0 4px;
+        flex-shrink: 0;
+      }
+
+      .sys-btn {
+        height: 32px;
+        padding: 0 12px;
+        border-radius: 8px;
+        border: none;
+        background: var(--bg-btn);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        flex-shrink: 0;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+
+      .sys-btn:hover {
+        background: var(--bg-btn-hover);
+        color: #ffffff;
+      }
+
+      .sys-btn.active {
+        background: var(--accent-sky);
+        color: #082f49;
+        font-weight: 600;
+      }
+
+      .dir-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 32px;
+        padding: 0 12px;
+        border-radius: 8px;
+        border: none;
+        background: var(--bg-btn);
+        color: var(--text-primary);
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        flex-shrink: 0;
+        cursor: pointer;
+      }
+
+      .dir-trigger:hover,
+      .dir-trigger.active {
+        background: rgba(51, 65, 85, 0.95);
+      }
+
+      .dock-row-2 {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border-divider);
+      }
+
+      .explode-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 185px;
+        flex: 1 1 200px;
+        max-width: 240px;
+      }
+
+      .explode-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+
+      .explode-slider {
+        width: 100%;
+        height: 5px;
+        accent-color: var(--accent-sky);
+        cursor: pointer;
+      }
+
+      .explode-val {
+        width: 36px;
+        text-align: right;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        color: var(--text-muted);
+        flex-shrink: 0;
+      }
+
+      .segmented {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        padding: 2px;
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.92);
+        border: 1px solid rgba(30, 41, 59, 0.95);
+      }
+
+      .seg-btn {
+        height: 28px;
+        padding: 0 10px;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .seg-btn:hover {
+        color: var(--text-primary);
+      }
+
+      .seg-btn.active {
+        background: rgba(51, 65, 85, 0.95);
+        color: var(--accent-sky-soft);
+      }
+
+      .layer-group,
+      .preset-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .layer-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        height: 32px;
+        padding: 0 10px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: rgba(30, 41, 59, 0.65);
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .layer-btn:hover {
+        color: var(--text-primary);
+      }
+
+      .layer-btn.active-sky {
+        background: rgba(51, 65, 85, 0.92);
+        border-color: rgba(56, 189, 248, 0.35);
+        color: var(--accent-sky-soft);
+      }
+
+      .layer-btn.active-rose {
+        background: rgba(51, 65, 85, 0.92);
+        border-color: rgba(244, 63, 94, 0.35);
+        color: #fda4af;
+      }
+
+      .preset-btn {
+        height: 32px;
+        padding: 0 10px;
+        border-radius: 8px;
+        border: none;
+        background: var(--bg-btn);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .preset-btn:hover {
+        background: var(--bg-btn-hover);
+        color: #ffffff;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      @media (max-width: 767px) {
+        .app-header {
+          top: 10px;
+          left: 10px;
+          max-width: calc(100vw - 20px);
+        }
+        .header-card {
+          padding: 8px 12px;
+          gap: 10px;
+        }
+        .header-hint {
+          display: none;
+        }
+        .inspector {
+          z-index: 30;
+          top: auto;
+          bottom: 12px;
+          left: 12px;
+          right: 12px;
+          width: auto;
+          max-width: none;
+          max-height: 56dvh;
+        }
+        .directory-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .dock-wrap {
+          bottom: 10px;
+          max-width: 96vw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-root">
+      <div id="viewport" aria-label="3D 인체 해부학 뷰포트"></div>
+
+      <header class="app-header">
+        <div class="header-card">
+          <div class="header-titles">
+            <div class="header-title-row">
+              <h1 class="brand-title">Anatomia 3D</h1>
+              <span class="brand-sub">인체 해부학 아틀라스</span>
+            </div>
+            <p class="header-hint">장기·혈관·감각기관·피부를 터치하여 기능과 의학용어를 확인하세요</p>
+          </div>
+          <button id="download-zip-btn" type="button" class="download-btn hidden" title="앱 전체 파일(.zip) 다운로드">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>앱 .zip</span>
+          </button>
+        </div>
+      </header>
+
+      <div id="hover-tooltip" class="hover-tooltip hidden" role="status" aria-live="polite">
+        <span id="tooltip-swatch" class="dot-swatch" aria-hidden="true"></span>
+        <span id="tooltip-ko" class="tooltip-ko"></span>
+        <span id="tooltip-en" class="tooltip-en"></span>
+      </div>
+
+      <aside id="inspector" class="inspector hidden" aria-label="선택한 기관 상세 정보">
+        <div class="inspector-head">
+          <div class="inspector-top-row">
+            <div style="min-width: 0">
+              <div class="inspector-meta">
+                <span id="insp-swatch" class="dot-swatch" aria-hidden="true"></span>
+                <span id="insp-system"></span>
+                <span aria-hidden="true">·</span>
+                <span id="insp-cavity"></span>
+              </div>
+              <h2 id="insp-name-ko" class="inspector-title"></h2>
+              <p id="insp-latin" class="inspector-latin"></p>
+            </div>
+            <div class="inspector-actions">
+              <button id="btn-focus" type="button" class="btn-focus" title="선택한 장기로 카메라 이동">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="22" y1="12" x2="18" y2="12"></line>
+                  <line x1="6" y1="12" x2="2" y2="12"></line>
+                  <line x1="12" y1="6" x2="12" y2="2"></line>
+                  <line x1="12" y1="22" x2="12" y2="18"></line>
+                </svg>
+                <span>초점</span>
+              </button>
+              <button id="btn-close-inspector" type="button" class="btn-close" aria-label="정보 패널 닫기">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <p id="insp-summary" class="inspector-summary"></p>
+        </div>
+
+        <div id="insp-scroll" class="inspector-body anatomy-scroll">
+          <div id="insp-metrics" class="metrics-grid"></div>
+
+          <section>
+            <h3 class="section-heading">주요 생리적 기능</h3>
+            <ul id="insp-functions" class="fn-list"></ul>
+          </section>
+
+          <section>
+            <h3 class="section-heading">핵심 의학용어 해설</h3>
+            <div id="insp-terms" class="terms-list"></div>
+          </section>
+
+          <section id="insp-related-wrap" class="related-section">
+            <h3 class="section-heading" style="color: var(--text-muted)">연관 해부 기관</h3>
+            <div id="insp-related" class="related-list"></div>
+          </section>
+        </div>
+      </aside>
+
+      <div class="dock-wrap">
+        <div id="directory-popover" class="directory-popover hidden">
+          <div class="directory-head">
+            <span id="directory-count">장기 및 기관 목록</span>
+            <button id="directory-close" type="button" class="directory-close">닫기</button>
+          </div>
+          <div id="directory-grid" class="directory-grid anatomy-scroll"></div>
+        </div>
+
+        <button id="dock-toggle" type="button" class="dock-toggle" aria-expanded="true" title="컨트롤 바 접기/펼치기 (단축키 H)">
+          <svg id="dock-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+          <span id="dock-toggle-label">컨트롤 숨기기</span>
+        </button>
+
+        <div id="dock-panel" class="dock-panel">
+          <div class="dock-row-1 anatomy-scroll" id="system-filters"></div>
+
+          <div class="dock-row-2">
+            <div class="explode-wrap">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+              </svg>
+              <label for="explode-slider" class="explode-label">분해 보기</label>
+              <input id="explode-slider" class="explode-slider" type="range" min="0" max="100" value="0" />
+              <span id="explode-val" class="explode-val">0%</span>
+            </div>
+
+            <div class="segmented" role="group" aria-label="인체 외피 표시 방식">
+              <button type="button" class="seg-btn active" data-shell="xray">반투명</button>
+              <button type="button" class="seg-btn" data-shell="skin">피부</button>
+              <button type="button" class="seg-btn" data-shell="hidden">숨김</button>
+            </div>
+
+            <div class="layer-group">
+              <button id="btn-vessels" type="button" class="layer-btn active-rose" aria-pressed="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                <span>혈관</span>
+              </button>
+              <button id="btn-skeleton" type="button" class="layer-btn active-sky" aria-pressed="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M17 10c.7-.7 1.69 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .81.7 1.8 0 2.5l-7 7c-.7.7-1.69 0-2.5 0a2.5 2.5 0 0 0 0 5c.28 0 .5.22.5.5a2.5 2.5 0 1 0 5 0c0-.81-.7-1.8 0-2.5Z"></path>
+                </svg>
+                <span>골격</span>
+              </button>
+            </div>
+
+            <div id="camera-presets" class="preset-group"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="fallback-screen" class="fallback-screen hidden">
+        <h2>3D 뷰포트를 불러올 수 없습니다</h2>
+        <p id="fallback-message">이 브라우저 환경에서는 WebGL 또는 3D 라이브러리를 초기화할 수 없습니다.</p>
+      </div>
+    </div>
+
+    <!-- Classic Non-Module Three.js CDN (works on both file:// double-click and HTTPS Vercel) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
+
+    <script>
+      (function () {
+        'use strict';
+
+        // =========================================================================
+        // 1. ANATOMICAL DATASET
+        // =========================================================================
+        var SYSTEM_FILTERS = [
+          { id: 'all', labelKo: '전체' },
+          { id: 'nervous', labelKo: '신경계' },
+          { id: 'sensory', labelKo: '감각·피부계' },
+          { id: 'cardiovascular', labelKo: '순환계' },
+          { id: 'respiratory', labelKo: '호흡계' },
+          { id: 'digestive', labelKo: '소화계' },
+          { id: 'urinary', labelKo: '비뇨계' },
+          { id: 'endocrine', labelKo: '내분비계' }
+        ];
+
+        var CAMERA_PRESETS = [
+          { id: 'full', labelKo: '전신', target: [0, 0.88, 0], position: [0, 1.08, 2.85] },
+          { id: 'head', labelKo: '두경부', target: [0, 1.62, 0.02], position: [0.30, 1.68, 0.64] },
+          { id: 'thorax', labelKo: '흉부', target: [0, 1.30, 0.02], position: [0.22, 1.34, 0.82] },
+          { id: 'abdomen', labelKo: '복부', target: [0, 1.04, 0.01], position: [-0.20, 1.12, 0.88] }
+        ];
+
+        var ORGANS = [
+          {
+            id: 'brain',
+            nameKo: '뇌',
+            nameEn: 'Brain',
+            latinName: 'Encephalon',
+            system: 'nervous',
+            systemKo: '중추신경계',
+            cavityKo: '두개강',
+            summary: '대뇌, 소뇌, 뇌간으로 구성된 중추신경계의 최고위 조절 기관으로, 인지·감각·운동·항상성을 총괄합니다.',
+            functions: [
+              '대뇌 피질(Cerebral cortex)을 통한 사고, 기억, 언어, 판단 및 감각 정보의 통합 처리',
+              '소뇌(Cerebellum)를 이용한 신체 평형 유지, 자세 조절 및 정교한 수의 운동 협응',
+              '뇌간(Brainstem)의 연수·교뇌를 통해 호흡, 심박수, 혈압 등 생명 유지 불수의 기능 자동 조절',
+              '시상하부를 통한 체온, 수분 균형, 수면-각성 주기 및 내분비계 호르몬 분비 제어'
+            ],
+            medicalTerms: [
+              { term: 'Cerebrum', korean: '대뇌', meaning: '좌·우 반구로 나뉘며 이랑(gyrus)과 고랑(sulcus) 주름을 통해 표면적을 극대화한 고위 인지 중추.' },
+              { term: 'Cerebellum', korean: '소뇌', meaning: '대뇌 후하방에 위치하며 근육 긴장도와 평형, 미세 운동의 정확성을 조율하는 기관.' },
+              { term: 'Brainstem', korean: '뇌간 (뇌줄기)', meaning: '중뇌·교뇌·연수로 이어지며 대뇌와 척수를 연결하고 호흡·순환 반사를 담당하는 생명 중추.' },
+              { term: 'Blood-Brain Barrier (BBB)', korean: '혈액뇌장벽', meaning: '혈중 독소나 병원체가 뇌 실질로 유입되는 것을 선택적으로 차단하는 미세혈관 보호 장벽.' }
+            ],
+            metrics: [
+              { label: '평균 중량', value: '1,300 – 1,400 g' },
+              { label: '신경세포 수', value: '약 860억 개' },
+              { label: '산소 소비율', value: '전신의 약 20%' }
+            ],
+            relatedIds: ['eyes', 'ears', 'nose', 'thyroid'],
+            accentHex: '#F4A28C',
+            basePosition: [0, 1.665, 0.004],
+            explodeOffset: [0, 0.18, 0.04],
+            focusTarget: [0, 1.665, 0.004],
+            focusCameraOffset: [0.24, 0.08, 0.56]
+          },
+          {
+            id: 'eyes',
+            nameKo: '눈 (안구 및 시신경)',
+            nameEn: 'Eyes & Optic Nerve',
+            latinName: 'Oculus et Nervus opticus',
+            system: 'sensory',
+            systemKo: '감각계 (시각)',
+            cavityKo: '안와 (눈확)',
+            summary: '빛을 굴절시켜 망막에 상을 맺고 광수용체에서 전기신호로 변환한 뒤 시신경을 통해 뇌로 전달하는 시각 기관입니다.',
+            functions: [
+              '각막(Cornea)과 수정체(Lens)가 빛을 굴절시키고 모양체근 조절로 원·근거리 초점(조절작용) 맞춤',
+              '홍채(Iris)의 동공 괄약근·산대근이 입사하는 빛의 양을 조절하여 망막 보호 및 명암 순응',
+              '망막(Retina)의 원추세포(색채·고해상도)와 간상세포(명암·야간시)가 빛 자극을 신경신호로 변환',
+              '시신경(CN II)이 좌·우 시신경교차를 거쳐 뇌 후두엽의 일차 시각피질로 영상 정보 전달'
+            ],
+            medicalTerms: [
+              { term: 'Cornea & Lens', korean: '각막과 수정체', meaning: '안구 전면의 투명한 굴절 매체로, 외부 빛을 망막의 황반에 정확히 모으는 렌즈 구조.' },
+              { term: 'Retina & Macula', korean: '망막과 황반', meaning: '안구 내벽을 감싸는 신경막과 그 중심부의 고밀도 시세포 영역(중심시력 담당).' },
+              { term: 'Optic Nerve (CN II)', korean: '시신경 (제2뇌신경)', meaning: '망막 신경절세포의 축삭이 모여 안구 뒤쪽 시신경유두를 통해 뇌로 향하는 감각신경.' },
+              { term: 'Sclera', korean: '공막 (흰자위)', meaning: '치밀한 아교섬유로 이루어져 안구 형태를 유지하고 외안근이 부착되는 강인한 외막.' }
+            ],
+            metrics: [
+              { label: '안구 직경', value: '약 24 mm' },
+              { label: '평균 중량 (개당)', value: '약 7.5 g' },
+              { label: '망막 시세포', value: '약 1억 2,600만 개' }
+            ],
+            relatedIds: ['brain', 'nose', 'ears'],
+            accentHex: '#60A5FA',
+            basePosition: [0, 1.675, 0.068],
+            explodeOffset: [0, 0.04, 0.16],
+            focusTarget: [0, 1.675, 0.068],
+            focusCameraOffset: [0.14, 0.04, 0.36]
+          },
+          {
+            id: 'ears',
+            nameKo: '귀 (청각 및 평형기관)',
+            nameEn: 'Ears & Vestibular System',
+            latinName: 'Auris (Organum vestibulocochleare)',
+            system: 'sensory',
+            systemKo: '감각계 (청각·평형)',
+            cavityKo: '측두골 부위',
+            summary: '공기 진동을 포집·증폭하여 소리를 인식하고, 내이의 전정기관과 세반고리관으로 신체의 회전·균형을 감지하는 기관입니다.',
+            functions: [
+              '외이(귓바퀴·외이도)가 음파를 모아 고막(Tympanic membrane)으로 전달 및 공명 증폭',
+              '중이의 청소골(망치뼈·모루뼈·등자뼈)이 고막 진동을 20배 이상 증폭해 내이 난원창에 전달',
+              '내이의 달팽이관(Cochlea) 내 코르티기관 유모세포가 음파 주파수를 전기신호로 변환(청각)',
+              '세반고리관(회전 가속도)과 전정기관(직선 가속도·중력)이 공간 내 머리 위치와 평형 유지'
+            ],
+            medicalTerms: [
+              { term: 'Auricle (Pinna)', korean: '이개 (귓바퀴)', meaning: '탄성연골과 피부로 이루어져 소리의 방향을 파악하고 외이도로 음파를 집음하는 외이 구조.' },
+              { term: 'Tympanic Membrane', korean: '고막', meaning: '외이도와 중이 사이에 팽팽히 걸쳐진 얇은 막으로 음파 압력 변화에 따라 진동함.' },
+              { term: 'Cochlea', korean: '달팽이관 (와우)', meaning: '2.5바퀴 나선형으로 감긴 내이 관으로, 기저막의 위치별 공명을 통해 음높이를 분별함.' },
+              { term: 'Semicircular Canals', korean: '세반고리관', meaning: '서로 직각으로 배열된 3개의 고리관(전·후·외측)으로 림프액 흐름을 통해 회전 평형을 감지.' }
+            ],
+            metrics: [
+              { label: '가청 주파수', value: '20 – 20,000 Hz' },
+              { label: '달팽이관 회전', value: '약 2.5 – 2.75회전' },
+              { label: '중이 뼈 개수', value: '양측 각 3개' }
+            ],
+            relatedIds: ['brain', 'eyes', 'nose'],
+            accentHex: '#FBBF24',
+            basePosition: [0, 1.662, 0.002],
+            explodeOffset: [0, 0.02, 0.0],
+            focusTarget: [0.088, 1.662, 0.002],
+            focusCameraOffset: [0.34, 0.05, 0.24]
+          },
+          {
+            id: 'nose',
+            nameKo: '코 및 비강',
+            nameEn: 'Nose & Nasal Cavity',
+            latinName: 'Nasus et Cavitas nasi',
+            system: 'sensory',
+            systemKo: '감각·호흡계 (후각)',
+            cavityKo: '안면 중앙 및 비강',
+            summary: '호흡 공기를 여과·가온·가습하는 상기도의 관문이자, 천장 후각상피를 통해 수많은 냄새 분자를 감지하는 후각 기관입니다.',
+            functions: [
+              '코털과 비강 점막의 끈적한 점액이 흡입 공기 속 먼지, 꽃가루, 세균을 1차로 포집·제거',
+              '풍부한 혈관망을 지닌 비갑개(Nasal conchae)가 차갑고 건조한 공기를 체온에 맞게 가온·가습',
+              '비강 상부 후각상피의 후각수용체 세포가 휘발성 화학물질을 감지해 후각신경(CN I)으로 전달',
+              '부비동(Paranasal sinuses)과 공명하여 목소리의 음색을 형성하고 두개골 무게를 경감'
+            ],
+            medicalTerms: [
+              { term: 'Nasal Septum', korean: '비중격 (코사이막)', meaning: '비강을 좌·우로 나누는 연골과 뼈(서골·사골 수직판)로 이루어진 정중 격벽.' },
+              { term: 'Nasal Conchae (Turbinates)', korean: '비갑개 (코선반)', meaning: '비강 외측벽에서 돌출한 상·중·하 선반 구조로 공기 와류를 형성해 표면 접촉을 극대화.' },
+              { term: 'Olfactory Epithelium', korean: '후각상피', meaning: '비강 천장에 위치하여 냄새 분자와 결합하는 특수 감각신경 상피조직.' },
+              { term: 'Paranasal Sinuses', korean: '부비동', meaning: '비강 주변 얼굴뼈 속의 공기로 찬 공간(상악동·전두동·사골동·접형동)으로 점액 배출과 공명 담당.' }
+            ],
+            metrics: [
+              { label: '후각 수용체 유전자', value: '약 400여 종' },
+              { label: '일일 점액 생성', value: '약 1.0 L' },
+              { label: '비갑개 구획', value: '상·중·하 3쌍' }
+            ],
+            relatedIds: ['trachea', 'lungs', 'brain', 'eyes'],
+            accentHex: '#FB923C',
+            basePosition: [0, 1.644, 0.082],
+            explodeOffset: [0, 0.0, 0.17],
+            focusTarget: [0, 1.644, 0.082],
+            focusCameraOffset: [0.18, 0.04, 0.36]
+          },
+          {
+            id: 'skin',
+            nameKo: '피부 (외피계)',
+            nameEn: 'Skin (Integument)',
+            latinName: 'Cutis (Integumentum commune)',
+            system: 'sensory',
+            systemKo: '외피·감각계',
+            cavityKo: '전신 최외층 표면',
+            summary: '인체에서 가장 넓은 면적을 차지하는 최대 기관으로, 외부 유해 환경으로부터의 방어, 체온 조절, 촉각 인지, 비타민 D 합성을 수행합니다.',
+            functions: [
+              '표피의 각질층과 지질 장벽이 세균 침입, 자외선, 물리적 마찰 및 체내 수분 증발(탈수) 차단',
+              '진피 내 땀샘(한선)의 땀 증발과 모세혈관 확장·수축을 통해 심부 체온을 36.5°C 부근으로 항상 유지',
+              '마이스너 소체·파치니 소체·자유신경종 등 피부 감각수용기로 촉각, 압각, 진동, 온도, 통증 감지',
+              '자외선(UVB) 노출 시 표피 세포에서 콜레스테롤 유도체를 비타민 D 전구체로 합성'
+            ],
+            medicalTerms: [
+              { term: 'Epidermis', korean: '표피', meaning: '가장 바깥쪽 중층편평상피로, 각질형성세포와 멜라닌세포·랑게르한스세포가 분포하며 혈관이 없음.' },
+              { term: 'Dermis', korean: '진피', meaning: '표피 아래의 두꺼운 결합조직층으로 콜라겐·엘라스틴 섬유, 혈관, 신경, 모낭, 땀샘이 밀집.' },
+              { term: 'Hypodermis (Subcutis)', korean: '피하조직', meaning: '진피 아래 지방세포가 풍부한 층으로 열 절연(보온), 충격 흡수 및 에너지 저장 역할을 수행.' },
+              { term: 'Melanocyte', korean: '멜라닌세포', meaning: '표피 기저층에 위치해 멜라닌 색소를 생성함으로써 자외선으로부터 세포 DNA 손상을 방어.' }
+            ],
+            metrics: [
+              { label: '총 표면적 (성인)', value: '1.5 – 2.0 m²' },
+              { label: '총 중량 비율', value: '체중의 약 15%' },
+              { label: '평균 두께', value: '1.5 – 4.0 mm' }
+            ],
+            relatedIds: ['vessels', 'brain', 'eyes'],
+            accentHex: '#E8A889',
+            basePosition: [0, 0, 0],
+            explodeOffset: [0, 0, 0],
+            focusTarget: [0, 0.90, 0],
+            focusCameraOffset: [0.35, 0.14, 2.55]
+          },
+          {
+            id: 'thyroid',
+            nameKo: '갑상선',
+            nameEn: 'Thyroid Gland',
+            latinName: 'Glandula thyroidea',
+            system: 'endocrine',
+            systemKo: '내분비계',
+            cavityKo: '전경부 (목 앞쪽)',
+            summary: '후두 아래 기관(숨관) 앞면을 나비 모양으로 감싸며 기초대사율과 체내 칼슘 농도를 조절하는 내분비샘입니다.',
+            functions: [
+              '티록신(T4)과 트리요오드티로닌(T3) 호르몬을 분비하여 전신 세포의 기초대사율과 열 생산 조절',
+              '성장기 신경계 발달과 골격 성숙 촉진 및 심박출량·위장관 운동 속도 조율',
+              '방여포세포(Parafollicular C-cell)에서 칼시토닌을 분비하여 혈중 칼슘 농도를 낮추고 뼈에 칼슘 저장'
+            ],
+            medicalTerms: [
+              { term: 'Thyroxine (T4) / T3', korean: '갑상선 호르몬', meaning: '요오드를 재료로 합성되어 체내 에너지 대사와 체온 유지를 촉진하는 핵심 호르몬.' },
+              { term: 'Isthmus', korean: '갑상선 협부', meaning: '좌엽과 우엽을 기관 앞쪽 정중선에서 다리처럼 연결하는 좁은 조직 띠.' },
+              { term: 'Calcitonin', korean: '칼시토닌', meaning: '파골세포의 작용을 억제해 혈중 칼슘 수치를 저하시키는 펩타이드 호르몬.' },
+              { term: 'TSH (Thyroid-Stimulating Hormone)', korean: '갑상선자극호르몬', meaning: '뇌하수체 전엽에서 분비되어 갑상선 호르몬 합성과 분비를 자극하는 조절 호르몬.' }
+            ],
+            metrics: [
+              { label: '평균 중량', value: '15 – 25 g' },
+              { label: '해부학적 위치', value: 'C5 – T1 높이' },
+              { label: '주요 원소', value: '요오드 (Iodine)' }
+            ],
+            relatedIds: ['trachea', 'brain'],
+            accentHex: '#C97B84',
+            basePosition: [0, 1.505, 0.032],
+            explodeOffset: [0, 0.05, 0.20],
+            focusTarget: [0, 1.505, 0.032],
+            focusCameraOffset: [0.16, 0.04, 0.44]
+          },
+          {
+            id: 'trachea',
+            nameKo: '기관 및 기관지',
+            nameEn: 'Trachea & Bronchi',
+            latinName: 'Trachea et Bronchi',
+            system: 'respiratory',
+            systemKo: '호흡계',
+            cavityKo: '경부 및 종격동',
+            summary: '후두에서 좌우 폐로 공기를 전달하는 연골 고리 구조의 주기도로, 이물질 여과 및 가습 기능을 수행합니다.',
+            functions: [
+              'C자형 유리연골 고리가 흡기 시 음압으로 인한 기도 붕괴를 방지하여 통기성 유지',
+              '점막의 섬모상피(Ciliated epithelium)와 술잔세포 점액으로 먼지·병원체를 포집해 인두 방향으로 배출',
+              '기관분기부(Carina)에서 좌·우 주기관지로 갈라져 양측 폐엽으로 균등하게 공기 분배'
+            ],
+            medicalTerms: [
+              { term: 'Tracheal Cartilage', korean: '기관 연골', meaning: '기관의 앞쪽과 양옆을 지지하는 16~20개의 말굽(C자) 모양 유리연골 고리.' },
+              { term: 'Carina', korean: '기관분기부 (용골)', meaning: '제4~5흉추 높이에서 기관이 좌·우 주기관지로 나뉘는 지점으로 기침 반사가 매우 민감한 부위.' },
+              { term: 'Mucociliary Escalator', korean: '점액섬모 에스컬레이터', meaning: '섬모의 규칙적 파동 운동으로 점액에 붙은 미세 입자를 위쪽으로 밀어 올리는 방어 기전.' }
+            ],
+            metrics: [
+              { label: '성인 길이', value: '10 – 12 cm' },
+              { label: '내경', value: '약 1.8 – 2.2 cm' },
+              { label: '연골 고리 수', value: '16 – 20개' }
+            ],
+            relatedIds: ['lungs', 'nose', 'thyroid'],
+            accentHex: '#9EB3C2',
+            basePosition: [0, 1.41, 0.014],
+            explodeOffset: [0, 0.03, 0.14],
+            focusTarget: [0, 1.41, 0.015],
+            focusCameraOffset: [0.22, 0.06, 0.56]
+          },
+          {
+            id: 'lungs',
+            nameKo: '폐',
+            nameEn: 'Lungs',
+            latinName: 'Pulmones',
+            system: 'respiratory',
+            systemKo: '호흡계',
+            cavityKo: '흉강 (가슴안)',
+            summary: '수억 개의 폐포에서 혈액과 공기 사이의 가스 교환(산소 흡수 및 이산화탄소 배출)을 담당하는 스펀지형 호흡 장기입니다.',
+            functions: [
+              '외호흡(External respiration)을 통해 흡입한 산소(O₂)를 폐모세혈관으로 확산시키고 이산화탄소(CO₂) 배출',
+              '탄산-중탄산염 완충계 조절을 통해 혈액의 산-염기 균형(pH 7.35–7.45) 유지에 핵심적으로 기여',
+              '우폐 3엽(상·중·하엽), 좌폐 2엽(상·하엽) 및 심장패임(Cardiac notch) 구조로 심장 공간 수용',
+              '폐포 계면활성제(Surfactant) 분비로 폐포 표면장력을 낮추어 호흡 일량 감소 및 허탈 방지'
+            ],
+            medicalTerms: [
+              { term: 'Alveolus', korean: '폐포 (허파꽈리)', meaning: '모세혈관과 맞닿아 실제 가스 교환이 일어나는 미세 공기주머니(양측 폐 합계 약 3억~5억 개).' },
+              { term: 'Pleura', korean: '흉막 (가슴막)', meaning: '폐 표면을 감싸는 장측 흉막과 흉벽 안쪽의 벽측 흉막으로 이루어진 이중 장막.' },
+              { term: 'Cardiac Notch', korean: '심장패임', meaning: '심장이 왼쪽으로 치우쳐 자리 잡을 수 있도록 좌폐 앞쪽 가장자리에 파인 오목한 부위.' },
+              { term: 'Pulmonary Surfactant', korean: '폐 계면활성제', meaning: '제2형 폐포세포에서 분비되어 호기 시 폐포가 찌그러지지 않게 유지하는 지질-단백 복합체.' }
+            ],
+            metrics: [
+              { label: '폐활량 (성인)', value: '3.5 – 5.0 L' },
+              { label: '총 가스교환 면적', value: '약 70 m²' },
+              { label: '분당 호흡수', value: '12 – 20회' }
+            ],
+            relatedIds: ['heart', 'trachea', 'nose'],
+            accentHex: '#E2959B',
+            basePosition: [0, 1.315, 0.006],
+            explodeOffset: [0, 0.02, 0.05],
+            focusTarget: [0, 1.315, 0.01],
+            focusCameraOffset: [0.24, 0.06, 0.68]
+          },
+          {
+            id: 'heart',
+            nameKo: '심장',
+            nameEn: 'Heart',
+            latinName: 'Cor',
+            system: 'cardiovascular',
+            systemKo: '순환계',
+            cavityKo: '중간 종격동',
+            summary: '4개의 방(좌·우 심방과 심실)과 4개의 판막이 정교하게 수축·이완하며 온몸과 폐로 혈액을 순환시키는 근육성 펌프입니다.',
+            functions: [
+              '우심방·우심실을 통해 전신에서 돌아온 정맥혈을 폐동맥으로 보내 폐순환(Pulmonary circulation) 수행',
+              '좌심방·좌심실의 강력한 수축력으로 산소가 풍부한 동맥혈을 대동맥을 통해 전신으로 공급(체순환)',
+              '동방결절(SA node)의 자발적 전기 흥분을 기반으로 분당 60–100회 규칙적 심박동 생성',
+              '이첨판·삼첨판·대동맥판·폐동맥판 등 4개 판막의 개폐로 혈액 역류 방지'
+            ],
+            medicalTerms: [
+              { term: 'Myocardium', korean: '심근층', meaning: '심장 벽의 중간을 이루는 두꺼운 특수 가로무늬 불수의근으로, 실제 펌프 수축력을 담당.' },
+              { term: 'Aorta', korean: '대동맥', meaning: '좌심실에서 시작되어 온몸으로 산화된 혈액을 내보내는 인체에서 가장 크고 탄성이 높은 동맥.' },
+              { term: 'Sinoatrial (SA) Node', korean: '동방결절', meaning: '우심방 상부에 위치하여 심박동 리듬을 시작하는 자연 심박조율기(Pacemaker).' },
+              { term: 'Coronary Arteries', korean: '관상동맥', meaning: '대동맥 기시부에서 갈라져 심장 근육 자체에 산소와 영양을 공급하는 혈관.' }
+            ],
+            metrics: [
+              { label: '평균 중량', value: '250 – 350 g' },
+              { label: '1회 박출량', value: '약 70 mL' },
+              { label: '안정 심박수', value: '60 – 100 bpm' }
+            ],
+            relatedIds: ['vessels', 'lungs', 'brain', 'kidneys'],
+            accentHex: '#D94A56',
+            basePosition: [0.022, 1.292, 0.036],
+            explodeOffset: [0.04, 0.02, 0.24],
+            focusTarget: [0.022, 1.292, 0.036],
+            focusCameraOffset: [0.20, 0.05, 0.50]
+          },
+          {
+            id: 'vessels',
+            nameKo: '혈관 (동맥 및 정맥)',
+            nameEn: 'Blood Vessels (Arteries & Veins)',
+            latinName: 'Vasa sanguinea (Arteriae et Venae)',
+            system: 'cardiovascular',
+            systemKo: '순환계',
+            cavityKo: '전신 혈관망',
+            summary: '심장을 중심으로 온몸의 두부·상지·장기·하지까지 뻗어 산소와 영양분, 호르몬, 면역세포를 운반하고 노폐물을 회수하는 폐쇄 순환 파이프입니다.',
+            functions: [
+              '동맥(붉은색): 대동맥에서 경동맥·쇄골하동맥·장골동맥으로 분지하여 심실 수축압으로 산화된 혈액을 전신 조직에 공급',
+              '정맥(푸른색): 이산화탄소와 대사 노폐물을 모은 정맥혈을 정맥 판막(Venous valve)과 근펌프 작용으로 상·하대정맥을 통해 심장으로 환류',
+              '세동맥 평활근의 수축·이완을 통해 말초 혈관 저항을 조절하여 혈압과 각 장기 혈류 배분 제어',
+              '피부 아래 모세혈관의 혈류량 증감으로 체열을 발산하거나 보존하여 체온 항상성 유지'
+            ],
+            medicalTerms: [
+              { term: 'Carotid & Jugular Vessels', korean: '경동맥과 내경정맥', meaning: '목 양측을 따라 뇌와 두경부로 산소혈액을 공급(총경동맥)하고 정맥혈을 회수(내경정맥)하는 주 혈관.' },
+              { term: 'Inferior Vena Cava (IVC)', korean: '하대정맥 (아래대정맥)', meaning: '복부와 양측 하지의 정맥혈을 모아 우심방으로 돌려보내는 인체 최대 직경의 정맥.' },
+              { term: 'Iliac & Femoral Arteries', korean: '장골동맥 및 대퇴동맥', meaning: '복부 대동맥 말단에서 골반과 양측 허벅지·종아리로 분지되어 하지 전체에 혈액을 공급하는 동맥.' },
+              { term: 'Endothelium', korean: '혈관내피', meaning: '모든 혈관 가장 안쪽 내강을 덮는 단층 세포로, 혈전 생성을 억제하고 산화질소(NO)로 혈관 이완을 조절.' }
+            ],
+            metrics: [
+              { label: '총 혈관 길이', value: '약 100,000 km' },
+              { label: '순환 혈액량', value: '약 4.5 – 5.5 L' },
+              { label: '대동맥 내경', value: '약 2.5 – 3.0 cm' }
+            ],
+            relatedIds: ['heart', 'lungs', 'kidneys', 'skin'],
+            accentHex: '#3B82F6',
+            basePosition: [0, 0, 0],
+            explodeOffset: [0, 0, 0],
+            focusTarget: [0, 1.12, 0.01],
+            focusCameraOffset: [0.25, 0.08, 1.55]
+          },
+          {
+            id: 'liver',
+            nameKo: '간 및 담낭',
+            nameEn: 'Liver & Gallbladder',
+            latinName: 'Hepar et Vesica biliaris',
+            system: 'digestive',
+            systemKo: '소화계',
+            cavityKo: '우상복부 (횡격막 직하)',
+            summary: '인체에서 가장 큰 실질 장기로, 영양소 대사, 해독 작용, 혈장 단백질 합성 및 담즙 생성·저장을 담당합니다.',
+            functions: [
+              '문맥(Portal vein)을 통해 장에서 흡수된 탄수화물·아미노산·지질을 저장 및 대사 전환(글리코겐 합성 등)',
+              '약물, 알코올, 암모니아 등 유해 대사산물을 요소나 수용성 물질로 해독(Detoxification)',
+              '알부민, 혈액응고인자(프로트롬빈·피브리노겐) 등 필수 혈장 단백질 합성',
+              '하루 약 600–1,000 mL의 담즙(Bile)을 생성해 담낭에 저장·농축한 뒤 지방 소화를 위해 십이지장으로 분비'
+            ],
+            medicalTerms: [
+              { term: 'Hepatocyte', korean: '간세포', meaning: '간 실질의 약 80%를 차지하며 대사·해독·담즙 생성을 수행하는 다기능 상피세포.' },
+              { term: 'Hepatic Portal Vein', korean: '간문맥', meaning: '위·장·비장에서 흡수한 영양분과 혈액을 간으로 직접 운반하는 특수 정맥.' },
+              { term: 'Vesica Biliaris (Gallbladder)', korean: '담낭 (쓸개)', meaning: '간 우엽 하면에 붙어 간에서 만든 담즙을 농축 보관했다가 식사 시 십이지장으로 방출하는 주머니.' },
+              { term: 'Bilirubin', korean: '빌리루빈', meaning: '노화된 적혈구의 헤모글로빈이 분해되며 생성되는 담즙 색소로, 간에서 포합되어 배출됨.' }
+            ],
+            metrics: [
+              { label: '평균 중량', value: '1,200 – 1,500 g' },
+              { label: '이중 혈류량', value: '분당 약 1,450 mL' },
+              { label: '담즙 일일 생산', value: '600 – 1,000 mL' }
+            ],
+            relatedIds: ['stomach', 'pancreas', 'intestines'],
+            accentHex: '#9B483E',
+            basePosition: [-0.048, 1.158, 0.032],
+            explodeOffset: [-0.18, 0.02, 0.16],
+            focusTarget: [-0.048, 1.158, 0.032],
+            focusCameraOffset: [-0.24, 0.06, 0.56]
+          },
+          {
+            id: 'stomach',
+            nameKo: '위',
+            nameEn: 'Stomach',
+            latinName: 'Gaster (Ventriculus)',
+            system: 'digestive',
+            systemKo: '소화계',
+            cavityKo: '좌상복부',
+            summary: '식도와 십이지장 사이를 잇는 J자 모양의 근육성 소화 주머니로, 위산 살균과 단백질 초기 분해를 수행합니다.',
+            functions: [
+              '음식물을 일시 저장하고 3중 평활근층의 연동·분절 운동을 통해 기계적으로 잘게 부수어 유미즙(Chyme) 형성',
+              '벽세포(Parietal cell)에서 강한 염산(pH 1.5–2.0)과 비타민 B₁₂ 흡수에 필수적인 내인자(Intrinsic factor) 분비',
+              '주세포(Chief cell)에서 펩시노겐을 분비하여 위산에 의해 활성화된 펩신으로 단백질 초기 소화 진행',
+              '두꺼운 점액-중탄산염 장벽을 형성하여 강산에 의한 위벽 자가 소화 방지'
+            ],
+            medicalTerms: [
+              { term: 'Gastric Rugae', korean: '위 주름', meaning: '공복 시 위 내벽에 접혀 있다가 음식물이 들어오면 펴지며 용적을 확장시키는 점막 주름.' },
+              { term: 'Pyloric Sphincter', korean: '유문괄약근', meaning: '위의 출구(유문)에 위치해 소화된 유미즙이 십이지장으로 넘어가는 속도를 조절하는 고리 근육.' },
+              { term: 'Chyme', korean: '유미즙', meaning: '위액과 섞여 반유동체 죽 상태로 변한 소화 초기 음식물 혼합물.' },
+              { term: 'Pepsin', korean: '펩신', meaning: '강산 환경에서 단백질을 작은 펩타이드 사슬로 절단하는 위액의 핵심 소화효소.' }
+            ],
+            metrics: [
+              { label: '공복 용적', value: '약 50 mL' },
+              { label: '최대 확장 용적', value: '1.5 – 2.0 L' },
+              { label: '위액 산도', value: 'pH 1.5 – 2.0' }
+            ],
+            relatedIds: ['liver', 'pancreas', 'spleen', 'intestines'],
+            accentHex: '#D88B7D',
+            basePosition: [0.056, 1.142, 0.032],
+            explodeOffset: [0.18, 0.02, 0.18],
+            focusTarget: [0.056, 1.142, 0.032],
+            focusCameraOffset: [0.24, 0.06, 0.56]
+          },
+          {
+            id: 'spleen',
+            nameKo: '비장 (지라)',
+            nameEn: 'Spleen',
+            latinName: 'Splen (Lien)',
+            system: 'cardiovascular',
+            systemKo: '림프·순환계',
+            cavityKo: '좌상복부 외측 후방',
+            summary: '위 뒤쪽 좌측 늑골 아래에 위치한 최대 림프 기관으로, 노화 적혈구 제거와 혈액 내 면역 감시를 수행합니다.',
+            functions: [
+              '적색수질(Red pulp)의 대식세포가 수명이 다한 노화 적혈구와 손상 혈소판을 걸러내고 철분을 회수',
+              '백색수질(White pulp)의 T세포·B세포 림프구를 통해 혈행성 세균과 항원에 대한 면역 반응 개시',
+              '혈소판과 단핵구의 예비 저장소 역할을 하며 필요 시 순환 혈액으로 방출'
+            ],
+            medicalTerms: [
+              { term: 'Red Pulp', korean: '적색수질 (적색속질)', meaning: '혈액 여과 및 노화 적혈구 파괴가 일어나는 비장의 혈관성 조직 영역.' },
+              { term: 'White Pulp', korean: '백색수질 (백색속질)', meaning: '중심동맥 주위를 둘러싼 림프조직으로 항체 생성과 면역세포 활성화를 담당.' },
+              { term: 'Splenic Hilum', korean: '비장문 (지라문)', meaning: '비장동맥과 비장정맥, 신경이 비장 내부로 출입하는 안쪽 오목 부위.' }
+            ],
+            metrics: [
+              { label: '평균 크기', value: '12 × 7 × 4 cm' },
+              { label: '평균 중량', value: '150 – 200 g' },
+              { label: '혈소판 저장율', value: '전체의 약 30%' }
+            ],
+            relatedIds: ['stomach', 'pancreas', 'heart'],
+            accentHex: '#7A3049',
+            basePosition: [0.108, 1.152, -0.024],
+            explodeOffset: [0.24, 0.02, -0.08],
+            focusTarget: [0.108, 1.152, -0.024],
+            focusCameraOffset: [0.34, 0.05, 0.36]
+          },
+          {
+            id: 'pancreas',
+            nameKo: '이자 (췌장)',
+            nameEn: 'Pancreas',
+            latinName: 'Pancreas',
+            system: 'digestive',
+            systemKo: '소화·내분비계',
+            cavityKo: '후복막강 (위 뒤쪽)',
+            summary: '위 뒤쪽에 가로로 놓인 혼합 분비선으로, 3대 영양소 소화효소(외분비)와 혈당 조절 호르몬(내분비)을 동시에 분비합니다.',
+            functions: [
+              '외분비선(선포세포)에서 아밀라아제·트립신·리파아제 등 탄수화물·단백질·지방 소화효소를 십이지장으로 분비',
+              '중탄산이온(HCO₃⁻)을 분비해 위에서 내려온 강한 산성 유미즙을 중화시켜 소장 점막 보호',
+              '내분비선(랑게르한스섬)의 베타세포에서 인슐린을 분비해 혈당을 낮추고, 알파세포에서 글루카곤으로 혈당 상승'
+            ],
+            medicalTerms: [
+              { term: 'Islets of Langerhans', korean: '랑게르한스섬 (이자섬)', meaning: '인슐린·글루카곤·소마토스타틴 등 혈당 조절 호르몬을 혈관으로 직접 분비하는 내분비 세포 집단.' },
+              { term: 'Insulin & Glucagon', korean: '인슐린과 글루카곤', meaning: '혈중 포도당 농도를 각각 하강(세포 내 흡수 촉진) 및 상승(간 글리코겐 분해)시키는 길항 호르몬.' },
+              { term: 'Pancreatic Duct (Wirsung)', korean: '주췌관', meaning: '췌장 꼬리에서 머리까지 중앙을 관통해 소화효소를 십이지장 유두로 운반하는 관.' }
+            ],
+            metrics: [
+              { label: '평균 길이', value: '15 – 20 cm' },
+              { label: '평균 중량', value: '70 – 100 g' },
+              { label: '이자액 일일 분비', value: '1.2 – 1.5 L' }
+            ],
+            relatedIds: ['stomach', 'liver', 'intestines'],
+            accentHex: '#E0B96B',
+            basePosition: [0.010, 1.095, -0.008],
+            explodeOffset: [0.05, -0.02, -0.18],
+            focusTarget: [0.010, 1.095, -0.008],
+            focusCameraOffset: [0.22, 0.05, 0.50]
+          },
+          {
+            id: 'kidneys',
+            nameKo: '신장 및 부신',
+            nameEn: 'Kidneys & Adrenal Glands',
+            latinName: 'Renes et Glandulae suprarenales',
+            system: 'urinary',
+            systemKo: '비뇨계',
+            cavityKo: '후복막강 (척추 양측)',
+            summary: '척추 양측에 강낭콩 모양으로 한 쌍이 위치하며 혈액 노폐물 여과, 수분·전해질·혈압 조절을 담당합니다. 우측 신장은 간 아래에 있어 좌측보다 약간 낮습니다.',
+            functions: [
+              '양측 약 200만 개의 네프론(Nephron)에서 혈장을 사구체 여과하고 필수 포도당·아미노산·수분을 재흡수',
+              '요소·요산·크레아티닌 등 질소 노폐물을 요관(Ureter)을 통해 방광으로 배설',
+              '레닌-안지오텐신-알도스테론 계통(RAAS)과 나트륨 배출 조절로 장기 혈압과 체액 삼투압 유지',
+              '적혈구생성인자(Erythropoietin) 분비 및 비타민 D 활성화, 상단 부신(Adrenal gland)의 스트레스·스테로이드 호르몬 분비'
+            ],
+            medicalTerms: [
+              { term: 'Nephron', korean: '네프론 (신원)', meaning: '사구체, 보우만주머니, 세뇨관으로 이루어져 소변을 생성하는 신장의 최소 구조·기능 단위.' },
+              { term: 'Glomerulus', korean: '사구체 (토리)', meaning: '혈압을 이용해 혈액 속 물과 작은 용질을 여과하는 실타래 모양의 특수 모세혈관 덩어리.' },
+              { term: 'Ureter', korean: '요관 (오줌관)', meaning: '신우(신장 깔때기)에서 만들어진 소변을 연동운동을 통해 방광으로 운반하는 한 쌍의 근육 관.' },
+              { term: 'Adrenal Gland', korean: '부신 (콩팥위샘)', meaning: '양측 신장 위쪽에 고깔처럼 얹혀 코르티솔, 알도스테론, 아드레날린을 분비하는 내분비 기관.' }
+            ],
+            metrics: [
+              { label: '평균 크기 (개당)', value: '11 × 6 × 3 cm' },
+              { label: '일일 사구체 여과량', value: '약 180 L' },
+              { label: '심박출량 수용 비율', value: '약 20 – 25%' }
+            ],
+            relatedIds: ['heart', 'vessels', 'liver'],
+            accentHex: '#A6464C',
+            basePosition: [0, 1.075, -0.044],
+            explodeOffset: [0, 0.0, -0.24],
+            focusTarget: [0, 1.075, -0.044],
+            focusCameraOffset: [0.22, 0.08, -0.58]
+          },
+          {
+            id: 'intestines',
+            nameKo: '소장 및 대장',
+            nameEn: 'Small & Large Intestines',
+            latinName: 'Intestinum tenue et crassum',
+            system: 'digestive',
+            systemKo: '소화계',
+            cavityKo: '복강 하부 및 골반강',
+            summary: '영양소의 최종 소화·흡수가 일어나는 소장(십이지장·공장·회장)과 수분 흡수·대변 형성을 담당하는 대장으로 구성됩니다.',
+            functions: [
+              '소장 내벽의 윤상주름·융모(Villi)·미세융모(Microvilli)를 통해 흡수 면적을 극대화하여 탄수화물·단백질·지방·비타민 흡수',
+              '대장(맹장·상행·횡행·하행·S상 결장)에서 남은 수분과 전해질을 재흡수하여 고형 대변 형성',
+              '대장 내 공생 장내 미생물총(Microbiota)이 비타민 K·B군 합성 및 단쇄지방산 생성으로 장 건강 유지',
+              '장관 연관 림프조직(GALT, 파이어판)을 통해 음식물 유래 병원체에 대한 점막 면역 방어 수행'
+            ],
+            medicalTerms: [
+              { term: 'Intestinal Villi', korean: '장 융모', meaning: '소장 점막 표면에 빽빽이 솟은 손가락 돌기로, 모세혈관과 암죽관(림프관)을 통해 영양소를 흡수.' },
+              { term: 'Peristalsis', korean: '연동 운동', meaning: '장벽 평활근의 순차적인 수축·이완 파동으로 내용물을 항문 방향으로 이동시키는 운동.' },
+              { term: 'Haustra', korean: '결장팽기', meaning: '대장 벽의 결장띠가 수축하면서 대장 표면에 형성되는 특징적인 마디 모양의 볼록한 주머니.' },
+              { term: 'Duodenum / Jejunum / Ileum', korean: '십이지장 · 공장 · 회장', meaning: '위에서 항문 방향으로 이어지는 소장의 3개 해부학적 구획.' }
+            ],
+            metrics: [
+              { label: '소장 길이', value: '약 6 – 7 m' },
+              { label: '대장 길이', value: '약 1.5 m' },
+              { label: '일일 수분 흡수', value: '약 8 – 9 L' }
+            ],
+            relatedIds: ['stomach', 'liver', 'pancreas'],
+            accentHex: '#D99E89',
+            basePosition: [0, 0.965, 0.022],
+            explodeOffset: [0, -0.08, 0.18],
+            focusTarget: [0, 0.965, 0.022],
+            focusCameraOffset: [0.22, 0.06, 0.62]
+          }
+        ];
+
+        var ORGAN_MAP = {};
+        ORGANS.forEach(function (o) {
+          ORGAN_MAP[o.id] = o;
+        });
+
+        var SURFACE_VISIBLE_IDS = { skin: true, eyes: true, ears: true, nose: true };
+
+        // =========================================================================
+        // 2. APPLICATION STATE & DOM REFERENCES
+        // =========================================================================
+        var state = {
+          selectedOrganId: null,
+          hoveredOrganId: null,
+          activeSystem: 'all',
+          explodeAmount: 0,
+          shellMode: 'xray',
+          showSkeleton: true,
+          showVessels: true,
+          dockCollapsed: false,
+          directoryOpen: false
+        };
+
+        var elViewport = document.getElementById('viewport');
+        var elFallback = document.getElementById('fallback-screen');
+        var elFallbackMsg = document.getElementById('fallback-message');
+        var elTooltip = document.getElementById('hover-tooltip');
+        var elTooltipSwatch = document.getElementById('tooltip-swatch');
+        var elTooltipKo = document.getElementById('tooltip-ko');
+        var elTooltipEn = document.getElementById('tooltip-en');
+        var elInspector = document.getElementById('inspector');
+        var elInspScroll = document.getElementById('insp-scroll');
+        var elDirectoryPopover = document.getElementById('directory-popover');
+        var elDirectoryGrid = document.getElementById('directory-grid');
+        var elDirectoryCount = document.getElementById('directory-count');
+        var elDockPanel = document.getElementById('dock-panel');
+        var elDockToggle = document.getElementById('dock-toggle');
+        var elDockToggleLabel = document.getElementById('dock-toggle-label');
+        var elDockChevron = document.getElementById('dock-chevron');
+        var elSystemFilters = document.getElementById('system-filters');
+        var elExplodeSlider = document.getElementById('explode-slider');
+        var elExplodeVal = document.getElementById('explode-val');
+        var elBtnVessels = document.getElementById('btn-vessels');
+        var elBtnSkeleton = document.getElementById('btn-skeleton');
+        var elCameraPresets = document.getElementById('camera-presets');
+        var elDownloadBtn = document.getElementById('download-zip-btn');
+
+        function showFallback(msg) {
+          if (msg) elFallbackMsg.textContent = msg;
+          elFallback.classList.remove('hidden');
+        }
+
+        if (typeof window.THREE === 'undefined') {
+          showFallback('3D 렌더링 라이브러리(Three.js CDN)를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로고침 해주세요.');
+          return;
+        }
+
+        // =========================================================================
+        // 3. PROCEDURAL TEXTURES (HTML5 2D CANVAS — ZERO EXTERNAL IMAGE FILES)
+        // =========================================================================
+        function createBrainGyriTexture(maxAnisotropy) {
+          var size = 512;
+          var colorCanvas = document.createElement('canvas');
+          colorCanvas.width = size;
+          colorCanvas.height = size;
+          var cCtx = colorCanvas.getContext('2d');
+
+          var bumpCanvas = document.createElement('canvas');
+          bumpCanvas.width = size;
+          bumpCanvas.height = size;
+          var bCtx = bumpCanvas.getContext('2d');
+
+          cCtx.fillStyle = '#e5a799';
+          cCtx.fillRect(0, 0, size, size);
+          bCtx.fillStyle = '#d4d4d4';
+          bCtx.fillRect(0, 0, size, size);
+
+          var seed = 4219;
+          function rand() {
+            seed = (seed * 16807) % 2147483647;
+            return (seed - 1) / 2147483646;
+          }
+
+          for (var i = 0; i < 110; i++) {
+            var x = rand() * size;
+            var y = rand() * size;
+            var angle = rand() * Math.PI * 2;
+            var steps = 14 + Math.floor(rand() * 14);
+            var width = 4 + rand() * 4;
+            cCtx.beginPath();
+            cCtx.moveTo(x, y);
+            bCtx.beginPath();
+            bCtx.moveTo(x, y);
+            for (var s = 0; s < steps; s++) {
+              angle += (rand() - 0.5) * 1.15;
+              x += Math.cos(angle) * 14;
+              y += Math.sin(angle) * 14;
+              cCtx.lineTo(x, y);
+              bCtx.lineTo(x, y);
+            }
+            cCtx.strokeStyle = 'rgba(138, 66, 62, 0.55)';
+            cCtx.lineWidth = width;
+            cCtx.lineCap = 'round';
+            cCtx.lineJoin = 'round';
+            cCtx.stroke();
+
+            bCtx.strokeStyle = 'rgba(35, 35, 35, 0.8)';
+            bCtx.lineWidth = width + 2;
+            bCtx.lineCap = 'round';
+            bCtx.lineJoin = 'round';
+            bCtx.stroke();
+          }
+
+          for (var j = 0; j < 45; j++) {
+            var cx = rand() * size;
+            var cy = rand() * size;
+            var ca = rand() * Math.PI * 2;
+            cCtx.beginPath();
+            cCtx.moveTo(cx, cy);
+            for (var k = 0; k < 10; k++) {
+              ca += (rand() - 0.5) * 0.9;
+              cx += Math.cos(ca) * 10;
+              cy += Math.sin(ca) * 10;
+              cCtx.lineTo(cx, cy);
+            }
+            cCtx.strokeStyle = 'rgba(175, 42, 48, 0.28)';
+            cCtx.lineWidth = 1.1;
+            cCtx.stroke();
+          }
+
+          var colorMap = new THREE.CanvasTexture(colorCanvas);
+          colorMap.encoding = THREE.sRGBEncoding;
+          colorMap.wrapS = THREE.RepeatWrapping;
+          colorMap.wrapT = THREE.RepeatWrapping;
+          colorMap.anisotropy = maxAnisotropy;
+
+          var bumpMap = new THREE.CanvasTexture(bumpCanvas);
+          bumpMap.wrapS = THREE.RepeatWrapping;
+          bumpMap.wrapT = THREE.RepeatWrapping;
+          bumpMap.anisotropy = maxAnisotropy;
+
+          return { colorMap: colorMap, bumpMap: bumpMap };
+        }
+
+        function createOrganicBumpTexture(maxAnisotropy) {
+          var size = 256;
+          var canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#808080';
+          ctx.fillRect(0, 0, size, size);
+
+          var seed = 8831;
+          function rand() {
+            seed = (seed * 16807) % 2147483647;
+            return (seed - 1) / 2147483646;
+          }
+
+          for (var i = 0; i < 650; i++) {
+            var x = rand() * size;
+            var y = rand() * size;
+            var r = 3 + rand() * 8;
+            var grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+            var bright = rand() > 0.45 ? 195 : 70;
+            grad.addColorStop(0, 'rgba(' + bright + ',' + bright + ',' + bright + ',0.32)');
+            grad.addColorStop(1, 'rgba(128,128,128,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          var tex = new THREE.CanvasTexture(canvas);
+          tex.wrapS = THREE.RepeatWrapping;
+          tex.wrapT = THREE.RepeatWrapping;
+          tex.anisotropy = maxAnisotropy;
+          return tex;
+        }
+
+        function createLungTexture(maxAnisotropy) {
+          var size = 256;
+          var canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#d98c93';
+          ctx.fillRect(0, 0, size, size);
+
+          var seed = 3197;
+          function rand() {
+            seed = (seed * 16807) % 2147483647;
+            return (seed - 1) / 2147483646;
+          }
+
+          for (var i = 0; i < 160; i++) {
+            var x = rand() * size;
+            var y = rand() * size;
+            var r = 8 + rand() * 14;
+            ctx.strokeStyle = 'rgba(150, 82, 92, 0.28)';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            for (var k = 0; k < 6; k++) {
+              var a = (k / 6) * Math.PI * 2 + rand() * 0.2;
+              var px = x + Math.cos(a) * r;
+              var py = y + Math.sin(a) * r;
+              if (k === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.stroke();
+          }
+
+          var tex = new THREE.CanvasTexture(canvas);
+          tex.encoding = THREE.sRGBEncoding;
+          tex.wrapS = THREE.RepeatWrapping;
+          tex.wrapT = THREE.RepeatWrapping;
+          tex.anisotropy = maxAnisotropy;
+          return tex;
+        }
+
+        function createSkinTexture(maxAnisotropy) {
+          var size = 256;
+          var colorCanvas = document.createElement('canvas');
+          colorCanvas.width = size;
+          colorCanvas.height = size;
+          var cCtx = colorCanvas.getContext('2d');
+
+          var bumpCanvas = document.createElement('canvas');
+          bumpCanvas.width = size;
+          bumpCanvas.height = size;
+          var bCtx = bumpCanvas.getContext('2d');
+
+          cCtx.fillStyle = '#dcb096';
+          cCtx.fillRect(0, 0, size, size);
+          bCtx.fillStyle = '#888888';
+          bCtx.fillRect(0, 0, size, size);
+
+          var seed = 7713;
+          function rand() {
+            seed = (seed * 16807) % 2147483647;
+            return (seed - 1) / 2147483646;
+          }
+
+          for (var i = 0; i < 900; i++) {
+            var x = rand() * size;
+            var y = rand() * size;
+            var r = 0.8 + rand() * 1.8;
+            cCtx.fillStyle = rand() > 0.5 ? 'rgba(202, 146, 120, 0.16)' : 'rgba(235, 198, 174, 0.16)';
+            cCtx.beginPath();
+            cCtx.arc(x, y, r, 0, Math.PI * 2);
+            cCtx.fill();
+
+            bCtx.fillStyle = 'rgba(90, 90, 90, 0.25)';
+            bCtx.beginPath();
+            bCtx.arc(x, y, r * 0.7, 0, Math.PI * 2);
+            bCtx.fill();
+          }
+
+          var colorMap = new THREE.CanvasTexture(colorCanvas);
+          colorMap.encoding = THREE.sRGBEncoding;
+          colorMap.wrapS = THREE.RepeatWrapping;
+          colorMap.wrapT = THREE.RepeatWrapping;
+          colorMap.repeat.set(6, 6);
+          colorMap.anisotropy = maxAnisotropy;
+
+          var bumpMap = new THREE.CanvasTexture(bumpCanvas);
+          bumpMap.wrapS = THREE.RepeatWrapping;
+          bumpMap.wrapT = THREE.RepeatWrapping;
+          bumpMap.repeat.set(6, 6);
+          bumpMap.anisotropy = maxAnisotropy;
+
+          return { colorMap: colorMap, bumpMap: bumpMap };
+        }
+
+        function createPlinthDialTexture(maxAnisotropy) {
+          var size = 1024;
+          var canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          var ctx = canvas.getContext('2d');
+          var cx = size / 2;
+          var cy = size / 2;
+
+          ctx.fillStyle = '#0f1624';
+          ctx.fillRect(0, 0, size, size);
+
+          var radii = [160, 270, 380, 460];
+          radii.forEach(function (r, idx) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.strokeStyle = idx === 3 ? 'rgba(56, 189, 248, 0.35)' : 'rgba(148, 163, 184, 0.16)';
+            ctx.lineWidth = idx === 3 ? 2.5 : 1.5;
+            ctx.stroke();
+          });
+
+          for (var deg = 0; deg < 360; deg += 5) {
+            var rad = (deg * Math.PI) / 180;
+            var isMajor = deg % 30 === 0;
+            var inner = isMajor ? 430 : 444;
+            var outer = 460;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(rad) * inner, cy + Math.sin(rad) * inner);
+            ctx.lineTo(cx + Math.cos(rad) * outer, cy + Math.sin(rad) * outer);
+            ctx.strokeStyle = isMajor ? 'rgba(56, 189, 248, 0.45)' : 'rgba(148, 163, 184, 0.18)';
+            ctx.lineWidth = isMajor ? 2 : 1;
+            ctx.stroke();
+          }
+
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(cx - 460, cy);
+          ctx.lineTo(cx + 460, cy);
+          ctx.moveTo(cx, cy - 460);
+          ctx.lineTo(cx, cy + 460);
+          ctx.stroke();
+
+          var tex = new THREE.CanvasTexture(canvas);
+          tex.encoding = THREE.sRGBEncoding;
+          tex.anisotropy = maxAnisotropy;
+          return tex;
+        }
+
+        function createContactShadowTexture() {
+          var size = 256;
+          var canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          var ctx = canvas.getContext('2d');
+          var grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+          grad.addColorStop(0, 'rgba(0, 0, 0, 0.72)');
+          grad.addColorStop(0.5, 'rgba(0, 0, 0, 0.32)');
+          grad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, size, size);
+          var tex = new THREE.CanvasTexture(canvas);
+          tex.encoding = THREE.sRGBEncoding;
+          return tex;
+        }
+
+        // =========================================================================
+        // 4. PROCEDURAL 3D ANATOMY BUILDER
+        // =========================================================================
+        function createVariableRadiusTube(curve, tubularSegments, radialSegments, radiusFn) {
+          var frames = curve.computeFrenetFrames(tubularSegments, false);
+          var vertices = [];
+          var uvs = [];
+          var indices = [];
+          var P = new THREE.Vector3();
+          var N = new THREE.Vector3();
+          var B = new THREE.Vector3();
+          var vertex = new THREE.Vector3();
+
+          for (var i = 0; i <= tubularSegments; i++) {
+            var t = i / tubularSegments;
+            curve.getPointAt(t, P);
+            N.copy(frames.normals[i]);
+            B.copy(frames.binormals[i]);
+            for (var j = 0; j <= radialSegments; j++) {
+              var v = (j / radialSegments) * Math.PI * 2;
+              var r = radiusFn(t, v);
+              var sin = Math.sin(v);
+              var cos = -Math.cos(v);
+              vertex.x = P.x + r * (cos * N.x + sin * B.x);
+              vertex.y = P.y + r * (cos * N.y + sin * B.y);
+              vertex.z = P.z + r * (cos * N.z + sin * B.z);
+              vertices.push(vertex.x, vertex.y, vertex.z);
+              uvs.push(t, j / radialSegments);
+            }
+          }
+
+          for (var jj = 1; jj <= tubularSegments; jj++) {
+            for (var ii = 1; ii <= radialSegments; ii++) {
+              var a = (radialSegments + 1) * (jj - 1) + (ii - 1);
+              var b = (radialSegments + 1) * jj + (ii - 1);
+              var c = (radialSegments + 1) * jj + ii;
+              var d = (radialSegments + 1) * (jj - 1) + ii;
+              indices.push(a, b, d);
+              indices.push(b, c, d);
+            }
+          }
+
+          var geom = new THREE.BufferGeometry();
+          geom.setIndex(indices);
+          geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+          geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+          geom.computeVertexNormals();
+          return geom;
+        }
+
+        function createSculptedSphere(radius, widthSegments, heightSegments, deform) {
+          var geom = new THREE.SphereGeometry(radius, widthSegments, heightSegments);
+          var pos = geom.attributes.position;
+          var v = new THREE.Vector3();
+          for (var i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i);
+            deform(v);
+            pos.setXYZ(i, v.x, v.y, v.z);
+          }
+          pos.needsUpdate = true;
+          geom.computeVertexNormals();
+          return geom;
+        }
+
+        function buildBodyPartGeometries() {
+          var torsoProfile = [
+            [0.82, 0.145, 0.095],
+            [0.88, 0.165, 0.108],
+            [0.95, 0.158, 0.104],
+            [1.04, 0.142, 0.094],
+            [1.14, 0.155, 0.104],
+            [1.26, 0.174, 0.114],
+            [1.37, 0.188, 0.115],
+            [1.45, 0.195, 0.098],
+            [1.49, 0.105, 0.072],
+            [1.52, 0.058, 0.056],
+            [1.58, 0.054, 0.054]
+          ];
+          var lathePoints = torsoProfile.map(function (p) {
+            return new THREE.Vector2(1, p[0]);
+          });
+          var torsoGeom = new THREE.LatheGeometry(lathePoints, 48);
+          var tPos = torsoGeom.attributes.position;
+          for (var i = 0; i < tPos.count; i++) {
+            var x = tPos.getX(i);
+            var y = tPos.getY(i);
+            var z = tPos.getZ(i);
+            var rx = 0.15;
+            var rz = 0.10;
+            for (var k = 0; k < torsoProfile.length - 1; k++) {
+              var y0 = torsoProfile[k][0], rx0 = torsoProfile[k][1], rz0 = torsoProfile[k][2];
+              var y1 = torsoProfile[k + 1][0], rx1 = torsoProfile[k + 1][1], rz1 = torsoProfile[k + 1][2];
+              if (y >= y0 - 0.001 && y <= y1 + 0.001) {
+                var t = THREE.MathUtils.clamp((y - y0) / (y1 - y0), 0, 1);
+                rx = THREE.MathUtils.lerp(rx0, rx1, t);
+                rz = THREE.MathUtils.lerp(rz0, rz1, t);
+                break;
+              }
+            }
+            var angle = Math.atan2(z, x);
+            var frontFactor = Math.sin(angle);
+            var zShift = 0;
+            if (y > 1.22 && y < 1.44 && frontFactor > 0) {
+              zShift += frontFactor * 0.014 * Math.sin(((y - 1.22) / 0.22) * Math.PI);
+            }
+            if (y > 0.96 && y < 1.15 && frontFactor < 0) {
+              zShift += -frontFactor * 0.012;
+            }
+            tPos.setXYZ(i, x * rx, y, z * rz + zShift);
+          }
+          torsoGeom.computeVertexNormals();
+
+          var headGeom = createSculptedSphere(0.105, 40, 32, function (v) {
+            v.x *= 0.80;
+            v.y *= 1.12;
+            v.z *= 0.94;
+            if (v.y < -0.02) {
+              var chinFactor = Math.min(1, (-v.y - 0.02) / 0.09);
+              v.x *= 1 - chinFactor * 0.35;
+              if (v.z > 0) v.z += chinFactor * 0.012;
+            }
+            if (v.z < -0.02 && v.y > -0.02) {
+              v.z -= 0.01;
+            }
+            if (v.z > 0.04) {
+              var dy = v.y - 0.01;
+              [-0.031, 0.031].forEach(function (ex) {
+                var dx = v.x - ex;
+                var d2 = dx * dx + dy * dy;
+                if (d2 < 0.00045) {
+                  v.z -= (1 - d2 / 0.00045) * 0.015;
+                }
+              });
+            }
+          });
+
+          var armGeoms = [-1, 1].map(function (side) {
+            var armCurve = new THREE.CatmullRomCurve3([
+              new THREE.Vector3(side * 0.175, 1.425, 0.0),
+              new THREE.Vector3(side * 0.225, 1.36, -0.005),
+              new THREE.Vector3(side * 0.242, 1.17, -0.012),
+              new THREE.Vector3(side * 0.258, 0.98, 0.018),
+              new THREE.Vector3(side * 0.270, 0.85, 0.036),
+              new THREE.Vector3(side * 0.276, 0.77, 0.044)
+            ]);
+            return createVariableRadiusTube(armCurve, 32, 16, function (t) {
+              if (t < 0.18) return THREE.MathUtils.lerp(0.056, 0.052, t / 0.18);
+              if (t < 0.48) return THREE.MathUtils.lerp(0.052, 0.042, (t - 0.18) / 0.3);
+              if (t < 0.82) return THREE.MathUtils.lerp(0.042, 0.028, (t - 0.48) / 0.34);
+              return THREE.MathUtils.lerp(0.028, 0.018, (t - 0.82) / 0.18);
+            });
+          });
+
+          var legEntries = [-1, 1].map(function (side) {
+            var legCurve = new THREE.CatmullRomCurve3([
+              new THREE.Vector3(side * 0.095, 0.86, 0.0),
+              new THREE.Vector3(side * 0.10, 0.66, 0.006),
+              new THREE.Vector3(side * 0.098, 0.46, 0.004),
+              new THREE.Vector3(side * 0.096, 0.28, -0.008),
+              new THREE.Vector3(side * 0.095, 0.06, -0.005)
+            ]);
+            var legGeom = createVariableRadiusTube(legCurve, 32, 18, function (t) {
+              if (t < 0.35) return THREE.MathUtils.lerp(0.082, 0.064, t / 0.35);
+              if (t < 0.55) return THREE.MathUtils.lerp(0.064, 0.054, (t - 0.35) / 0.2);
+              if (t < 0.72) return THREE.MathUtils.lerp(0.054, 0.056, (t - 0.55) / 0.17);
+              return THREE.MathUtils.lerp(0.056, 0.036, (t - 0.72) / 0.28);
+            });
+            var footGeom = createSculptedSphere(0.048, 18, 14, function (v) {
+              v.x *= 0.78;
+              v.y *= 0.52;
+              v.z *= 1.95;
+              if (v.y < 0) v.y *= 0.25;
+            });
+            return { side: side, legGeom: legGeom, footGeom: footGeom };
+          });
+
+          return { torsoGeom: torsoGeom, headGeom: headGeom, armGeoms: armGeoms, legEntries: legEntries };
+        }
+
+        function buildAnatomyScene(textures, isSoftwareGl) {
+          var rootGroup = new THREE.Group();
+          var organs = new Map();
+          var raycastTargets = [];
+
+          // --- Plinth ---
+          var plinth = new THREE.Group();
+          var baseMat = new THREE.MeshStandardMaterial({ color: 0x151c2c, roughness: 0.42, metalness: 0.72 });
+          var base = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.50, 0.055, 64), baseMat);
+          base.position.y = -0.028;
+          base.receiveShadow = true;
+          plinth.add(base);
+
+          var ringMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.24, metalness: 0.9 });
+          var ring = new THREE.Mesh(new THREE.TorusGeometry(0.462, 0.006, 16, 72), ringMat);
+          ring.rotation.x = Math.PI / 2;
+          ring.position.y = -0.001;
+          plinth.add(ring);
+
+          var dialMat = new THREE.MeshStandardMaterial({
+            map: textures.plinthDial,
+            roughness: 0.55,
+            metalness: 0.25,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnits: -1
+          });
+          var dial = new THREE.Mesh(new THREE.CircleGeometry(0.455, 64), dialMat);
+          dial.rotation.x = -Math.PI / 2;
+          dial.position.y = 0.001;
+          dial.receiveShadow = true;
+          plinth.add(dial);
+
+          var shadowMat = new THREE.MeshBasicMaterial({
+            map: textures.contactShadow,
+            transparent: true,
+            opacity: 0.55,
+            depthWrite: false
+          });
+          var shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.68, 0.56), shadowMat);
+          shadowPlane.rotation.x = -Math.PI / 2;
+          shadowPlane.position.y = 0.003;
+          plinth.add(shadowPlane);
+          rootGroup.add(plinth);
+
+          // --- Shell & Skin ---
+          var bodyGeoms = buildBodyPartGeometries();
+          var shellGroup = new THREE.Group();
+          var shellMat = new THREE.MeshPhysicalMaterial({
+            color: 0x9ec9eb,
+            roughness: 0.24,
+            metalness: 0.02,
+            clearcoat: 0.65,
+            clearcoatRoughness: 0.2,
+            transmission: isSoftwareGl ? 0 : 0.48,
+            thickness: 0.25,
+            ior: 1.38,
+            transparent: true,
+            opacity: isSoftwareGl ? 0.16 : 0.2,
+            depthWrite: false,
+            side: THREE.FrontSide
+          });
+
+          var sTorso = new THREE.Mesh(bodyGeoms.torsoGeom, shellMat);
+          sTorso.renderOrder = 12;
+          shellGroup.add(sTorso);
+
+          var sHead = new THREE.Mesh(bodyGeoms.headGeom, shellMat);
+          sHead.position.set(0, 1.665, 0.008);
+          sHead.renderOrder = 12;
+          shellGroup.add(sHead);
+
+          bodyGeoms.armGeoms.forEach(function (ag) {
+            var m = new THREE.Mesh(ag, shellMat);
+            m.renderOrder = 12;
+            shellGroup.add(m);
+          });
+
+          bodyGeoms.legEntries.forEach(function (le) {
+            var lm = new THREE.Mesh(le.legGeom, shellMat);
+            lm.renderOrder = 12;
+            shellGroup.add(lm);
+            var fm = new THREE.Mesh(le.footGeom, shellMat);
+            fm.position.set(le.side * 0.096, 0.012, 0.042);
+            fm.renderOrder = 12;
+            shellGroup.add(fm);
+          });
+
+          shellGroup.traverse(function (obj) {
+            obj.raycast = function () {};
+          });
+          rootGroup.add(shellGroup);
+
+          var skinGroup = new THREE.Group();
+          var skinMat = new THREE.MeshStandardMaterial({
+            map: textures.skinColor,
+            bumpMap: textures.skinBump,
+            bumpScale: 0.0014,
+            color: 0xf4d2bc,
+            roughness: 0.62,
+            metalness: 0.02
+          });
+          skinGroup.add(new THREE.Mesh(bodyGeoms.torsoGeom.clone(), skinMat));
+          var skHead = new THREE.Mesh(bodyGeoms.headGeom.clone(), skinMat);
+          skHead.position.set(0, 1.665, 0.008);
+          skinGroup.add(skHead);
+
+          var lipMat = new THREE.MeshStandardMaterial({ color: 0xc27a72, roughness: 0.48 });
+          var lips = new THREE.Mesh(new THREE.CapsuleGeometry(0.0045, 0.026, 6, 12), lipMat);
+          lips.rotation.z = Math.PI / 2;
+          lips.position.set(0, 1.610, 0.095);
+          skinGroup.add(lips);
+
+          bodyGeoms.armGeoms.forEach(function (ag) {
+            skinGroup.add(new THREE.Mesh(ag.clone(), skinMat));
+          });
+          bodyGeoms.legEntries.forEach(function (le) {
+            skinGroup.add(new THREE.Mesh(le.legGeom.clone(), skinMat));
+            var fm = new THREE.Mesh(le.footGeom.clone(), skinMat);
+            fm.position.set(le.side * 0.096, 0.012, 0.042);
+            skinGroup.add(fm);
+          });
+          skinGroup.visible = false;
+          rootGroup.add(skinGroup);
+
+          // --- Skeleton Reference ---
+          var skeletonGroup = new THREE.Group();
+          var boneMat = new THREE.MeshStandardMaterial({
+            color: 0xd9d2c3,
+            roughness: 0.62,
+            metalness: 0.05,
+            transparent: true,
+            opacity: 0.34,
+            depthWrite: false
+          });
+          var vertCount = 24;
+          var vertebrae = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.018, 0.019, 0.018, 12), boneMat, vertCount);
+          var dummy = new THREE.Object3D();
+          for (var vi = 0; vi < vertCount; vi++) {
+            var vt = vi / (vertCount - 1);
+            var vy = THREE.MathUtils.lerp(0.95, 1.56, vt);
+            var vz = -0.068 + Math.sin(vt * Math.PI * 2.15) * 0.014;
+            var vs = THREE.MathUtils.lerp(1.22, 0.68, vt);
+            dummy.position.set(0, vy, vz);
+            dummy.scale.set(vs, 1, vs * 0.85);
+            dummy.updateMatrix();
+            vertebrae.setMatrixAt(vi, dummy.matrix);
+          }
+          vertebrae.instanceMatrix.needsUpdate = true;
+          vertebrae.frustumCulled = false;
+          vertebrae.renderOrder = 4;
+          skeletonGroup.add(vertebrae);
+
+          var sternumShape = new THREE.Shape();
+          sternumShape.moveTo(-0.016, 0.075);
+          sternumShape.lineTo(0.016, 0.075);
+          sternumShape.lineTo(0.012, -0.055);
+          sternumShape.lineTo(0, -0.082);
+          sternumShape.lineTo(-0.012, -0.055);
+          sternumShape.closePath();
+          var sternum = new THREE.Mesh(
+            new THREE.ExtrudeGeometry(sternumShape, {
+              depth: 0.008,
+              bevelEnabled: true,
+              bevelThickness: 0.003,
+              bevelSize: 0.003,
+              bevelSegments: 2
+            }),
+            boneMat
+          );
+          sternum.position.set(0, 1.33, 0.095);
+          sternum.rotation.x = -0.14;
+          sternum.renderOrder = 4;
+          skeletonGroup.add(sternum);
+
+          for (var r = 0; r < 9; r++) {
+            var rt = r / 8;
+            var yBack = THREE.MathUtils.lerp(1.42, 1.19, rt);
+            var yFront = yBack - 0.025 - rt * 0.02;
+            var rw = 0.115 + Math.sin(rt * Math.PI * 0.85) * 0.048;
+            var depthFront = 0.086 + Math.sin(rt * Math.PI * 0.8) * 0.016;
+            [-1, 1].forEach(function (side) {
+              var ribCurve = new THREE.CatmullRomCurve3([
+                new THREE.Vector3(side * 0.018, yBack, -0.068),
+                new THREE.Vector3(side * (rw * 0.72), yBack - 0.004, -0.055),
+                new THREE.Vector3(side * rw, (yBack + yFront) * 0.5, 0.01),
+                new THREE.Vector3(side * (rw * 0.65), yFront, depthFront * 0.86),
+                new THREE.Vector3(side * (r < 6 ? 0.018 : 0.065), yFront + (r >= 6 ? 0.025 : 0), depthFront)
+              ]);
+              var rib = new THREE.Mesh(new THREE.TubeGeometry(ribCurve, 22, 0.0042, 6, false), boneMat);
+              rib.renderOrder = 4;
+              skeletonGroup.add(rib);
+            });
+          }
+
+          [-1, 1].forEach(function (side) {
+            var clavCurve = new THREE.CatmullRomCurve3([
+              new THREE.Vector3(side * 0.016, 1.435, 0.088),
+              new THREE.Vector3(side * 0.082, 1.448, 0.068),
+              new THREE.Vector3(side * 0.158, 1.442, 0.012)
+            ]);
+            var clav = new THREE.Mesh(new THREE.TubeGeometry(clavCurve, 16, 0.006, 8, false), boneMat);
+            clav.renderOrder = 4;
+            skeletonGroup.add(clav);
+
+            var pelvisCurve = new THREE.CatmullRomCurve3([
+              new THREE.Vector3(side * 0.032, 0.94, -0.062),
+              new THREE.Vector3(side * 0.132, 0.97, -0.012),
+              new THREE.Vector3(side * 0.125, 0.915, 0.055),
+              new THREE.Vector3(side * 0.025, 0.84, 0.065)
+            ]);
+            var pelvisMesh = new THREE.Mesh(new THREE.TubeGeometry(pelvisCurve, 20, 0.011, 8, false), boneMat);
+            pelvisMesh.renderOrder = 4;
+            skeletonGroup.add(pelvisMesh);
+          });
+
+          skeletonGroup.traverse(function (obj) {
+            obj.raycast = function () {};
+          });
+          rootGroup.add(skeletonGroup);
+
+          // --- Organ Registration Helper ---
+          function registerOrgan(id, group, skipAdd) {
+            var meta = ORGAN_MAP[id];
+            var basePos = new THREE.Vector3(meta.basePosition[0], meta.basePosition[1], meta.basePosition[2]);
+            var explodeOffset = new THREE.Vector3(meta.explodeOffset[0], meta.explodeOffset[1], meta.explodeOffset[2]);
+            group.position.copy(basePos);
+            var mats = [];
+            group.traverse(function (child) {
+              if (child.isMesh) {
+                child.userData.organId = id;
+                child.castShadow = true;
+                child.receiveShadow = true;
+                raycastTargets.push(child);
+                if (child.material && child.material.isMeshStandardMaterial && mats.indexOf(child.material) === -1) {
+                  child.material.userData.baseEmissiveHex = child.material.emissive.getHex();
+                  mats.push(child.material);
+                }
+              }
+            });
+            organs.set(id, { id: id, group: group, materials: mats, basePosition: basePos, explodeOffset: explodeOffset });
+            if (!skipAdd) rootGroup.add(group);
+          }
+
+          registerOrgan('skin', skinGroup, true);
+
+          // 1. Brain
+          var brainGroup = new THREE.Group();
+          var brainMat = new THREE.MeshStandardMaterial({
+            map: textures.brainColor,
+            bumpMap: textures.brainBump,
+            bumpScale: 0.0045,
+            roughness: 0.52,
+            metalness: 0.02
+          });
+          [-1, 1].forEach(function (side) {
+            var hemiGeom = createSculptedSphere(0.056, 32, 24, function (v) {
+              v.x *= 0.64;
+              v.y *= 0.88;
+              v.z *= 1.24;
+              if (side * v.x < 0) v.x *= 0.14;
+              if (v.y < 0.01 && v.z > -0.02 && v.z < 0.04) {
+                v.x += side * 0.008;
+                v.y -= 0.006;
+              }
+              if (v.z > 0.03) v.x *= 0.9;
+            });
+            var hemi = new THREE.Mesh(hemiGeom, brainMat);
+            hemi.position.set(side * 0.021, 0.012, 0.0);
+            brainGroup.add(hemi);
+          });
+          var cerebellumMat = new THREE.MeshStandardMaterial({
+            color: 0xd38f86,
+            bumpMap: textures.brainBump,
+            bumpScale: 0.003,
+            roughness: 0.62
+          });
+          [-1, 1].forEach(function (side) {
+            var cGeom = createSculptedSphere(0.024, 20, 16, function (v) {
+              v.x *= 1.05;
+              v.y *= 0.72;
+              v.z *= 0.85;
+            });
+            var cLobe = new THREE.Mesh(cGeom, cerebellumMat);
+            cLobe.position.set(side * 0.018, -0.028, -0.036);
+            brainGroup.add(cLobe);
+          });
+          var stemCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(0, -0.005, -0.005),
+            new THREE.Vector3(0, -0.032, -0.014),
+            new THREE.Vector3(0, -0.068, -0.024)
+          ]);
+          brainGroup.add(
+            new THREE.Mesh(
+              createVariableRadiusTube(stemCurve, 16, 12, function (t) { return THREE.MathUtils.lerp(0.014, 0.008, t); }),
+              new THREE.MeshStandardMaterial({ color: 0xe6c3b6, roughness: 0.5 })
+            )
+          );
+          registerOrgan('brain', brainGroup);
+
+          // 2. Eyes
+          var eyesGroup = new THREE.Group();
+          var scleraMat = new THREE.MeshStandardMaterial({ color: 0xf4f1ec, roughness: 0.22, metalness: 0.02 });
+          var irisMat = new THREE.MeshStandardMaterial({ color: 0x4b3b2c, roughness: 0.35 });
+          var pupilMat = new THREE.MeshStandardMaterial({ color: 0x0b0e14, roughness: 0.12 });
+          var opticNerveMat = new THREE.MeshStandardMaterial({ color: 0xe6d2b5, roughness: 0.48 });
+          [-1, 1].forEach(function (side) {
+            var ex = side * 0.031;
+            var globe = new THREE.Mesh(new THREE.SphereGeometry(0.0135, 24, 18), scleraMat);
+            globe.position.set(ex, 0, 0.014);
+            eyesGroup.add(globe);
+
+            var iris = new THREE.Mesh(new THREE.CylinderGeometry(0.0068, 0.0068, 0.002, 20), irisMat);
+            iris.rotation.x = Math.PI / 2;
+            iris.position.set(ex, 0, 0.0265);
+            eyesGroup.add(iris);
+
+            var pupil = new THREE.Mesh(new THREE.CylinderGeometry(0.0032, 0.0032, 0.0024, 16), pupilMat);
+            pupil.rotation.x = Math.PI / 2;
+            pupil.position.set(ex, 0, 0.027);
+            eyesGroup.add(pupil);
+
+            var nerveCurve = new THREE.CatmullRomCurve3([
+              new THREE.Vector3(ex, 0, 0.002),
+              new THREE.Vector3(ex * 0.65, -0.004, -0.028),
+              new THREE.Vector3(0, -0.008, -0.056)
+            ]);
+            eyesGroup.add(new THREE.Mesh(new THREE.TubeGeometry(nerveCurve, 16, 0.0028, 8, false), opticNerveMat));
+          });
+          registerOrgan('eyes', eyesGroup);
+
+          // 3. Ears
+          var earsGroup = new THREE.Group();
+          var earSkinMat = new THREE.MeshStandardMaterial({ color: 0xdfb197, roughness: 0.56 });
+          var cochleaMat = new THREE.MeshStandardMaterial({ color: 0xe6c88a, roughness: 0.4, metalness: 0.08 });
+          var tympMat = new THREE.MeshStandardMaterial({ color: 0xbacbd9, roughness: 0.3 });
+          [-1, 1].forEach(function (side) {
+            var outerX = side * 0.084;
+            var auricleCurve = new THREE.CatmullRomCurve3([
+              new THREE.Vector3(outerX + side * 0.003, 0.022, 0.006),
+              new THREE.Vector3(outerX + side * 0.011, 0.028, -0.008),
+              new THREE.Vector3(outerX + side * 0.014, 0.008, -0.017),
+              new THREE.Vector3(outerX + side * 0.010, -0.018, -0.012),
+              new THREE.Vector3(outerX + side * 0.004, -0.025, -0.001)
+            ]);
+            earsGroup.add(new THREE.Mesh(new THREE.TubeGeometry(auricleCurve, 22, 0.0046, 10, false), earSkinMat));
+
+            var pinnaGeom = createSculptedSphere(0.018, 16, 14, function (v) {
+              v.x *= 0.34;
+              v.y *= 1.42;
+              v.z *= 0.78;
+            });
+            var pinna = new THREE.Mesh(pinnaGeom, earSkinMat);
+            pinna.position.set(outerX + side * 0.005, 0.002, -0.004);
+            pinna.rotation.y = side * -0.25;
+            earsGroup.add(pinna);
+
+            var canalCurve = new THREE.CatmullRomCurve3([
+              new THREE.Vector3(outerX + side * 0.001, 0.002, 0.002),
+              new THREE.Vector3(side * 0.064, 0.002, 0.001)
+            ]);
+            earsGroup.add(new THREE.Mesh(new THREE.TubeGeometry(canalCurve, 10, 0.0036, 10, false), earSkinMat));
+
+            var tymp = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.0015, 14), tympMat);
+            tymp.rotation.z = Math.PI / 2;
+            tymp.position.set(side * 0.063, 0.002, 0.001);
+            earsGroup.add(tymp);
+
+            var cochleaPts = [];
+            for (var s = 0; s <= 28; s++) {
+              var st = s / 28;
+              var theta = st * Math.PI * 4.5;
+              var cr = 0.0075 * (1 - st * 0.72);
+              cochleaPts.push(new THREE.Vector3(side * (0.056 - st * 0.006), 0.001 + Math.sin(theta) * cr, 0.003 + Math.cos(theta) * cr));
+            }
+            var cochleaCurve = new THREE.CatmullRomCurve3(cochleaPts);
+            earsGroup.add(
+              new THREE.Mesh(
+                createVariableRadiusTube(cochleaCurve, 28, 8, function (t) { return THREE.MathUtils.lerp(0.0026, 0.0012, t); }),
+                cochleaMat
+              )
+            );
+            var semiLoop = new THREE.Mesh(new THREE.TorusGeometry(0.0065, 0.0012, 8, 20), cochleaMat);
+            semiLoop.position.set(side * 0.056, 0.009, -0.005);
+            semiLoop.rotation.y = side * 0.6;
+            earsGroup.add(semiLoop);
+          });
+          registerOrgan('ears', earsGroup);
+
+          // 4. Nose
+          var noseGroup = new THREE.Group();
+          var extNoseMat = new THREE.MeshStandardMaterial({ color: 0xe0b095, roughness: 0.56 });
+          var mucosaMat = new THREE.MeshStandardMaterial({ color: 0xc96c6b, roughness: 0.44 });
+          var extNoseGeom = createSculptedSphere(0.017, 22, 18, function (v) {
+            v.x *= 0.84;
+            v.y *= 1.48;
+            v.z *= 1.25;
+            if (v.y > 0) {
+              var topT = v.y / 0.025;
+              v.x *= 1 - topT * 0.52;
+              v.z -= topT * 0.007;
+            } else {
+              v.x *= 1.15;
+            }
+            if (v.z < 0) v.z *= 0.35;
+          });
+          var extNose = new THREE.Mesh(extNoseGeom, extNoseMat);
+          extNose.position.set(0, 0.002, 0.018);
+          extNose.rotation.x = -0.22;
+          noseGroup.add(extNose);
+
+          var septum = new THREE.Mesh(new THREE.BoxGeometry(0.0025, 0.026, 0.044), mucosaMat);
+          septum.position.set(0, 0.0, -0.012);
+          noseGroup.add(septum);
+          [-1, 1].forEach(function (side) {
+            [-0.005, 0.005].forEach(function (ty) {
+              var turb = new THREE.Mesh(new THREE.CapsuleGeometry(0.0036, 0.028, 6, 10), mucosaMat);
+              turb.rotation.x = Math.PI / 2;
+              turb.position.set(side * 0.0065, ty, -0.012);
+              noseGroup.add(turb);
+            });
+          });
+          registerOrgan('nose', noseGroup);
+
+          // 5. Thyroid
+          var thyroidGroup = new THREE.Group();
+          var thyroidMat = new THREE.MeshStandardMaterial({
+            color: 0xb95360,
+            bumpMap: textures.organicBump,
+            bumpScale: 0.002,
+            roughness: 0.42,
+            metalness: 0.04
+          });
+          [-1, 1].forEach(function (side) {
+            var lobeGeom = createSculptedSphere(0.015, 20, 16, function (v) {
+              v.x *= 0.7;
+              v.y *= 1.45;
+              v.z *= 0.75;
+            });
+            var lobe = new THREE.Mesh(lobeGeom, thyroidMat);
+            lobe.position.set(side * 0.014, 0, -0.003);
+            lobe.rotation.z = side * -0.18;
+            thyroidGroup.add(lobe);
+          });
+          var isthmus = new THREE.Mesh(new THREE.CapsuleGeometry(0.0065, 0.022, 6, 12), thyroidMat);
+          isthmus.rotation.z = Math.PI / 2;
+          isthmus.position.set(0, -0.002, 0.005);
+          thyroidGroup.add(isthmus);
+          registerOrgan('thyroid', thyroidGroup);
+
+          // 6. Trachea
+          var tracheaGroup = new THREE.Group();
+          var tracheaWallMat = new THREE.MeshStandardMaterial({ color: 0xc29397, roughness: 0.56 });
+          var cartilageMat = new THREE.MeshStandardMaterial({ color: 0xd9e4eb, roughness: 0.35, metalness: 0.04 });
+          var mainPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.145, 20), tracheaWallMat);
+          mainPipe.position.set(0, 0.042, 0);
+          tracheaGroup.add(mainPipe);
+          for (var ti = 0; ti < 11; ti++) {
+            var trRing = new THREE.Mesh(new THREE.TorusGeometry(0.0115, 0.0022, 8, 20), cartilageMat);
+            trRing.rotation.x = Math.PI / 2;
+            trRing.position.set(0, -0.018 + ti * 0.012, 0);
+            tracheaGroup.add(trRing);
+          }
+          [-1, 1].forEach(function (side) {
+            var bCurve = new THREE.CatmullRomCurve3([
+              new THREE.Vector3(0, -0.028, 0),
+              new THREE.Vector3(side * 0.032, -0.048, -0.004),
+              new THREE.Vector3(side * 0.062, -0.062, -0.006)
+            ]);
+            tracheaGroup.add(new THREE.Mesh(new THREE.TubeGeometry(bCurve, 14, 0.0082, 12, false), cartilageMat));
+          });
+          registerOrgan('trachea', tracheaGroup);
+
+          // 7. Lungs
+          var lungsGroup = new THREE.Group();
+          var lungMat = new THREE.MeshStandardMaterial({
+            map: textures.lungColor,
+            bumpMap: textures.organicBump,
+            bumpScale: 0.0025,
+            color: 0xf4c4c8,
+            roughness: 0.64,
+            metalness: 0.0
+          });
+          var rightLungGeom = createSculptedSphere(0.088, 34, 28, function (v) {
+            v.x *= 0.68;
+            v.y *= 1.38;
+            v.z *= 0.92;
+            if (v.y > 0) {
+              var topT = v.y / 0.121;
+              v.x *= 1 - topT * 0.42;
+              v.z *= 1 - topT * 0.32;
+            }
+            if (v.y < -0.075) v.y = -0.075 - (v.y + 0.075) * 0.25;
+            if (v.x > 0.015) v.x *= 0.55;
+            if (Math.abs(v.y - (-0.015 + v.z * 0.4)) < 0.007 && v.x < 0.01) v.multiplyScalar(0.95);
+          });
+          var rightLung = new THREE.Mesh(rightLungGeom, lungMat);
+          rightLung.position.set(-0.074, 0, 0);
+          lungsGroup.add(rightLung);
+
+          var leftLungGeom = createSculptedSphere(0.086, 34, 28, function (v) {
+            v.x *= 0.65;
+            v.y *= 1.36;
+            v.z *= 0.92;
+            if (v.y > 0) {
+              var topT = v.y / 0.118;
+              v.x *= 1 - topT * 0.42;
+              v.z *= 1 - topT * 0.32;
+            }
+            if (v.y < -0.072) v.y = -0.072 - (v.y + 0.072) * 0.25;
+            if (v.x < -0.015) v.x *= 0.55;
+            if (v.x < 0.012 && v.z > -0.01 && v.y < 0.02 && v.y > -0.085) {
+              v.x += Math.exp(-Math.pow((v.y + 0.03) / 0.042, 2)) * 0.026;
+            }
+          });
+          var leftLung = new THREE.Mesh(leftLungGeom, lungMat);
+          leftLung.position.set(0.075, 0, 0);
+          lungsGroup.add(leftLung);
+          registerOrgan('lungs', lungsGroup);
+
+          // 8. Heart
+          var heartGroup = new THREE.Group();
+          var myocardiumMat = new THREE.MeshStandardMaterial({
+            color: 0xa82834,
+            bumpMap: textures.organicBump,
+            bumpScale: 0.0022,
+            roughness: 0.36,
+            metalness: 0.05
+          });
+          var aortaMat = new THREE.MeshStandardMaterial({ color: 0xc9404b, roughness: 0.4, metalness: 0.04 });
+          var veinMat = new THREE.MeshStandardMaterial({ color: 0x456990, roughness: 0.44, metalness: 0.04 });
+
+          var ventricleGeom = createSculptedSphere(0.042, 28, 22, function (v) {
+            v.x *= 0.88;
+            v.y *= 1.18;
+            v.z *= 0.82;
+            if (v.y < 0) {
+              var t = Math.min(1, -v.y / 0.05);
+              v.x *= 1 - t * 0.45;
+              v.z *= 1 - t * 0.45;
+              v.x += t * 0.014;
+            }
+          });
+          var ventricle = new THREE.Mesh(ventricleGeom, myocardiumMat);
+          ventricle.rotation.z = 0.38;
+          ventricle.rotation.x = 0.16;
+          heartGroup.add(ventricle);
+
+          var rightAtrium = new THREE.Mesh(new THREE.SphereGeometry(0.022, 18, 14), myocardiumMat);
+          rightAtrium.position.set(-0.024, 0.022, -0.004);
+          heartGroup.add(rightAtrium);
+
+          var leftAtrium = new THREE.Mesh(new THREE.SphereGeometry(0.020, 18, 14), myocardiumMat);
+          leftAtrium.position.set(0.015, 0.028, -0.015);
+          heartGroup.add(leftAtrium);
+
+          var aortaCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(-0.005, 0.018, 0.006),
+            new THREE.Vector3(-0.014, 0.052, 0.008),
+            new THREE.Vector3(0.002, 0.072, -0.002),
+            new THREE.Vector3(0.016, 0.056, -0.022),
+            new THREE.Vector3(0.010, -0.045, -0.032)
+          ]);
+          heartGroup.add(new THREE.Mesh(new THREE.TubeGeometry(aortaCurve, 28, 0.0095, 12, false), aortaMat));
+
+          [-0.008, 0.0, 0.008].forEach(function (offset, idx) {
+            var branchCurve = new THREE.CatmullRomCurve3([
+              new THREE.Vector3(offset, 0.07, -0.002 - idx * 0.004),
+              new THREE.Vector3(offset * 1.8 - 0.004, 0.095, -0.004 - idx * 0.004)
+            ]);
+            heartGroup.add(new THREE.Mesh(new THREE.TubeGeometry(branchCurve, 8, 0.0036, 8, false), aortaMat));
+          });
+
+          var svcCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(-0.026, 0.026, -0.004),
+            new THREE.Vector3(-0.028, 0.085, -0.006)
+          ]);
+          heartGroup.add(new THREE.Mesh(new THREE.TubeGeometry(svcCurve, 12, 0.0075, 10, false), veinMat));
+
+          var pulmCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(0.006, 0.012, 0.022),
+            new THREE.Vector3(0.004, 0.046, 0.012),
+            new THREE.Vector3(0.032, 0.048, -0.006)
+          ]);
+          heartGroup.add(new THREE.Mesh(new THREE.TubeGeometry(pulmCurve, 16, 0.0075, 10, false), veinMat));
+
+          var coroCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(0.002, 0.026, 0.028),
+            new THREE.Vector3(0.008, 0.0, 0.032),
+            new THREE.Vector3(0.016, -0.026, 0.024)
+          ]);
+          heartGroup.add(new THREE.Mesh(new THREE.TubeGeometry(coroCurve, 12, 0.0022, 6, false), aortaMat));
+          registerOrgan('heart', heartGroup);
+
+          // 9. Systemic Blood Vessels
+          var vesselsGroup = new THREE.Group();
+          var sysArteryMat = new THREE.MeshStandardMaterial({ color: 0xd4313e, roughness: 0.34, metalness: 0.06 });
+          var sysVeinMat = new THREE.MeshStandardMaterial({ color: 0x356cb5, roughness: 0.38, metalness: 0.06 });
+
+          function addVesselTube(points, rStart, rEnd, mat, segments) {
+            var curve = new THREE.CatmullRomCurve3(points.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); }));
+            var geom = createVariableRadiusTube(curve, segments || 24, 10, function (t) { return THREE.MathUtils.lerp(rStart, rEnd, t); });
+            vesselsGroup.add(new THREE.Mesh(geom, mat));
+          }
+
+          addVesselTube([[0.016, 1.255, 0.004], [0.008, 1.15, -0.018], [0.006, 1.01, -0.022], [0.006, 0.945, -0.016]], 0.0085, 0.0068, sysArteryMat, 24);
+          addVesselTube([[-0.014, 1.265, 0.006], [-0.016, 1.14, -0.014], [-0.014, 1.00, -0.018], [-0.012, 0.94, -0.014]], 0.009, 0.0072, sysVeinMat, 24);
+
+          [-1, 1].forEach(function (side) {
+            addVesselTube([[side * 0.014, 1.385, 0.012], [side * 0.026, 1.485, 0.008], [side * 0.028, 1.59, 0.004], [side * 0.022, 1.65, 0.012]], 0.0042, 0.0024, sysArteryMat, 18);
+            addVesselTube([[side * 0.036, 1.635, -0.002], [side * 0.035, 1.50, 0.0], [side * 0.024, 1.385, 0.006]], 0.0026, 0.0046, sysVeinMat, 18);
+            addVesselTube([[side * 0.018, 1.39, 0.01], [side * 0.115, 1.425, 0.004], [side * 0.195, 1.38, -0.004], [side * 0.236, 1.17, -0.010], [side * 0.256, 0.98, 0.018], [side * 0.268, 0.84, 0.036]], 0.0044, 0.002, sysArteryMat, 26);
+            addVesselTube([[side * 0.275, 0.84, 0.030], [side * 0.263, 0.98, 0.012], [side * 0.244, 1.17, -0.016], [side * 0.202, 1.375, -0.010], [side * 0.118, 1.418, -0.002], [side * 0.018, 1.378, 0.004]], 0.002, 0.0046, sysVeinMat, 26);
+
+            var ry = side === -1 ? 1.065 : 1.083;
+            addVesselTube([[0.006, ry, -0.020], [side * 0.044, ry, -0.038]], 0.0036, 0.0028, sysArteryMat, 8);
+            addVesselTube([[-0.014, ry + 0.005, -0.016], [side * 0.044, ry + 0.004, -0.034]], 0.0038, 0.003, sysVeinMat, 8);
+
+            addVesselTube([[0.006, 0.945, -0.016], [side * 0.068, 0.86, 0.006], [side * 0.088, 0.66, 0.010], [side * 0.092, 0.46, -0.006], [side * 0.092, 0.26, -0.008], [side * 0.092, 0.07, 0.002]], 0.0058, 0.0022, sysArteryMat, 28);
+            addVesselTube([[side * 0.102, 0.07, -0.002], [side * 0.102, 0.26, -0.012], [side * 0.100, 0.46, 0.004], [side * 0.078, 0.66, 0.014], [side * 0.058, 0.86, 0.002], [-0.012, 0.94, -0.014]], 0.0022, 0.006, sysVeinMat, 28);
+          });
+          registerOrgan('vessels', vesselsGroup);
+
+          // 10. Liver & Gallbladder
+          var liverGroup = new THREE.Group();
+          var liverMat = new THREE.MeshStandardMaterial({
+            color: 0x7c2d26,
+            bumpMap: textures.organicBump,
+            bumpScale: 0.002,
+            roughness: 0.34,
+            metalness: 0.06
+          });
+          var liverGeom = createSculptedSphere(0.095, 34, 26, function (v) {
+            v.x *= 1.05;
+            v.y *= 0.62;
+            v.z *= 0.72;
+            if (v.x > -0.02) {
+              var leftT = THREE.MathUtils.clamp((v.x + 0.02) / 0.12, 0, 1);
+              v.y *= 1 - leftT * 0.52;
+              v.z *= 1 - leftT * 0.36;
+              v.y += leftT * 0.018;
+            }
+            if (v.y < 0) v.y *= 0.68;
+          });
+          var liverMesh = new THREE.Mesh(liverGeom, liverMat);
+          liverMesh.rotation.z = 0.14;
+          liverGroup.add(liverMesh);
+
+          var falciform = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.055, 0.06), new THREE.MeshStandardMaterial({ color: 0xcab8b0, roughness: 0.55 }));
+          falciform.position.set(0.024, 0.012, 0.024);
+          falciform.rotation.z = -0.1;
+          liverGroup.add(falciform);
+
+          var gbPts = [
+            new THREE.Vector2(0, 0),
+            new THREE.Vector2(0.011, 0.006),
+            new THREE.Vector2(0.013, 0.018),
+            new THREE.Vector2(0.007, 0.036),
+            new THREE.Vector2(0.003, 0.048)
+          ];
+          var gbMesh = new THREE.Mesh(new THREE.LatheGeometry(gbPts, 18), new THREE.MeshStandardMaterial({ color: 0x3b7a57, roughness: 0.32, metalness: 0.05 }));
+          gbMesh.position.set(-0.015, -0.036, 0.028);
+          gbMesh.rotation.set(0.95, 0, -0.35);
+          liverGroup.add(gbMesh);
+          registerOrgan('liver', liverGroup);
+
+          // 11. Stomach
+          var stomachGroup = new THREE.Group();
+          var stomachMat = new THREE.MeshStandardMaterial({
+            color: 0xc9736b,
+            bumpMap: textures.organicBump,
+            bumpScale: 0.0024,
+            roughness: 0.45,
+            metalness: 0.03
+          });
+          var stomachCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(-0.022, 0.058, -0.006),
+            new THREE.Vector3(0.016, 0.052, -0.005),
+            new THREE.Vector3(0.032, 0.014, 0.008),
+            new THREE.Vector3(0.012, -0.032, 0.014),
+            new THREE.Vector3(-0.026, -0.026, 0.006),
+            new THREE.Vector3(-0.044, -0.018, -0.005)
+          ]);
+          stomachGroup.add(
+            new THREE.Mesh(
+              createVariableRadiusTube(stomachCurve, 36, 20, function (t) {
+                if (t < 0.2) return THREE.MathUtils.lerp(0.010, 0.032, t / 0.2);
+                if (t < 0.58) return THREE.MathUtils.lerp(0.032, 0.028, (t - 0.2) / 0.38);
+                return THREE.MathUtils.lerp(0.028, 0.011, (t - 0.58) / 0.42);
+              }),
+              stomachMat
+            )
+          );
+          var fundus = new THREE.Mesh(new THREE.SphereGeometry(0.028, 18, 14), stomachMat);
+          fundus.position.set(0.015, 0.048, -0.004);
+          stomachGroup.add(fundus);
+          registerOrgan('stomach', stomachGroup);
+
+          // 12. Spleen
+          var spleenGroup = new THREE.Group();
+          var spleenGeom = createSculptedSphere(0.032, 24, 18, function (v) {
+            v.x *= 0.58;
+            v.y *= 1.15;
+            v.z *= 0.85;
+            if (v.x < 0) v.x *= 0.65;
+          });
+          var spleenMesh = new THREE.Mesh(
+            spleenGeom,
+            new THREE.MeshStandardMaterial({ color: 0x6c243a, bumpMap: textures.organicBump, bumpScale: 0.002, roughness: 0.38, metalness: 0.04 })
+          );
+          spleenMesh.rotation.set(0.25, 0.35, -0.25);
+          spleenGroup.add(spleenMesh);
+          registerOrgan('spleen', spleenGroup);
+
+          // 13. Pancreas
+          var pancreasGroup = new THREE.Group();
+          var panCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(-0.042, -0.014, 0.004),
+            new THREE.Vector3(-0.012, -0.004, 0.006),
+            new THREE.Vector3(0.025, 0.006, 0.0),
+            new THREE.Vector3(0.068, 0.018, -0.014)
+          ]);
+          var panGeom = createVariableRadiusTube(panCurve, 28, 14, function (t, angle) {
+            var baseR = t < 0.25 ? THREE.MathUtils.lerp(0.021, 0.015, t / 0.25) : THREE.MathUtils.lerp(0.015, 0.006, (t - 0.25) / 0.75);
+            return baseR * (1 + 0.09 * Math.sin(t * 42) * Math.cos(angle * 3));
+          });
+          pancreasGroup.add(
+            new THREE.Mesh(panGeom, new THREE.MeshStandardMaterial({ color: 0xd9ad5b, bumpMap: textures.organicBump, bumpScale: 0.0038, roughness: 0.55 }))
+          );
+          registerOrgan('pancreas', pancreasGroup);
+
+          // 14. Kidneys
+          var kidneysGroup = new THREE.Group();
+          var kidneyMat = new THREE.MeshStandardMaterial({ color: 0x8f3339, bumpMap: textures.organicBump, bumpScale: 0.0018, roughness: 0.38, metalness: 0.05 });
+          var adrenalMat = new THREE.MeshStandardMaterial({ color: 0xdca74c, roughness: 0.52 });
+          var ureterMat = new THREE.MeshStandardMaterial({ color: 0xd9bfa9, roughness: 0.52 });
+          [-1, 1].forEach(function (side) {
+            var yOffset = side === -1 ? -0.010 : 0.008;
+            var xPos = side * 0.058;
+            var kGeom = createSculptedSphere(0.028, 24, 18, function (v) {
+              v.x *= 0.75;
+              v.y *= 1.32;
+              v.z *= 0.68;
+              if (side * v.x < -0.005 && Math.abs(v.y) < 0.018) v.x += side * 0.008;
+            });
+            var kidney = new THREE.Mesh(kGeom, kidneyMat);
+            kidney.position.set(xPos, yOffset, 0);
+            kidney.rotation.z = side * -0.15;
+            kidneysGroup.add(kidney);
+
+            var adrenal = new THREE.Mesh(new THREE.ConeGeometry(0.013, 0.016, 12), adrenalMat);
+            adrenal.position.set(xPos - side * 0.003, yOffset + 0.036, 0.002);
+            adrenal.rotation.z = side * 0.25;
+            kidneysGroup.add(adrenal);
+
+            var uCurve = new THREE.CatmullRomCurve3([
+              new THREE.Vector3(xPos - side * 0.014, yOffset - 0.006, 0.002),
+              new THREE.Vector3(xPos - side * 0.022, yOffset - 0.075, 0.014),
+              new THREE.Vector3(side * 0.018, yOffset - 0.145, 0.036)
+            ]);
+            kidneysGroup.add(new THREE.Mesh(new THREE.TubeGeometry(uCurve, 18, 0.003, 8, false), ureterMat));
+          });
+          registerOrgan('kidneys', kidneysGroup);
+
+          // 15. Intestines
+          var intestinesGroup = new THREE.Group();
+          var largeIntMat = new THREE.MeshStandardMaterial({ color: 0xc28172, bumpMap: textures.organicBump, bumpScale: 0.0025, roughness: 0.5 });
+          var smallIntMat = new THREE.MeshStandardMaterial({ color: 0xdca08e, bumpMap: textures.organicBump, bumpScale: 0.002, roughness: 0.44 });
+          var colonCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(-0.072, -0.072, 0.016),
+            new THREE.Vector3(-0.082, -0.015, 0.012),
+            new THREE.Vector3(-0.078, 0.056, 0.014),
+            new THREE.Vector3(-0.025, 0.068, 0.028),
+            new THREE.Vector3(0.032, 0.066, 0.028),
+            new THREE.Vector3(0.082, 0.072, 0.006),
+            new THREE.Vector3(0.084, 0.005, 0.008),
+            new THREE.Vector3(0.074, -0.065, 0.012),
+            new THREE.Vector3(0.028, -0.084, 0.004),
+            new THREE.Vector3(0.0, -0.105, -0.018)
+          ]);
+          intestinesGroup.add(
+            new THREE.Mesh(
+              createVariableRadiusTube(colonCurve, 84, 16, function (t) {
+                return 0.0165 * (1 + 0.18 * Math.abs(Math.sin(t * Math.PI * 24)));
+              }),
+              largeIntMat
+            )
+          );
+          var smallCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(-0.025, 0.042, 0.004),
+            new THREE.Vector3(0.038, 0.036, 0.022),
+            new THREE.Vector3(-0.044, 0.022, 0.026),
+            new THREE.Vector3(0.042, 0.008, 0.030),
+            new THREE.Vector3(-0.046, -0.008, 0.024),
+            new THREE.Vector3(0.040, -0.022, 0.028),
+            new THREE.Vector3(-0.038, -0.038, 0.022),
+            new THREE.Vector3(0.034, -0.052, 0.024),
+            new THREE.Vector3(-0.026, -0.064, 0.018),
+            new THREE.Vector3(0.018, -0.072, 0.014),
+            new THREE.Vector3(-0.064, -0.068, 0.015)
+          ]);
+          intestinesGroup.add(new THREE.Mesh(new THREE.TubeGeometry(smallCurve, 120, 0.0112, 12, false), smallIntMat));
+          registerOrgan('intestines', intestinesGroup);
+
+          return {
+            rootGroup: rootGroup,
+            shellGroup: shellGroup,
+            shellMat: shellMat,
+            skinGroup: skinGroup,
+            skeletonGroup: skeletonGroup,
+            boneMat: boneMat,
+            organs: organs,
+            raycastTargets: raycastTargets,
+            heartGroup: heartGroup,
+            lungsGroup: lungsGroup,
+            vesselsGroup: vesselsGroup
+          };
+        }
+
+        // =========================================================================
+        // 5. WEBGL VIEWPORT INITIALIZATION & ANIMATION LOOP
+        // =========================================================================
+        function detectSoftwareWebGL() {
+          try {
+            var probe = document.createElement('canvas');
+            var gl = probe.getContext('webgl2') || probe.getContext('webgl');
+            if (!gl) return true;
+            var ext = gl.getExtension('WEBGL_debug_renderer_info');
+            var param = ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER;
+            var gpu = String(gl.getParameter(param));
+            var lose = gl.getExtension('WEBGL_lose_context');
+            if (lose) lose.loseContext();
+            return /SwiftShader|llvmpipe|softpipe|Software|Basic Render/i.test(gpu);
+          } catch (e) {
+            return true;
+          }
+        }
+
+        var isSoftwareGl = detectSoftwareWebGL();
+        var renderer;
+        try {
+          renderer = new THREE.WebGLRenderer({
+            antialias: !isSoftwareGl,
+            powerPreference: 'high-performance'
+          });
+        } catch (err) {
+          showFallback('이 브라우저에서는 WebGL 3D 가속을 초기화할 수 없습니다.');
+          return;
+        }
+
+        var width = elViewport.clientWidth || window.innerWidth;
+        var height = elViewport.clientHeight || window.innerHeight;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.08;
+        renderer.setPixelRatio(isSoftwareGl ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(width, height);
+        renderer.shadowMap.enabled = !isSoftwareGl;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        var canvas = renderer.domElement;
+        elViewport.appendChild(canvas);
+
+        canvas.addEventListener('webglcontextlost', function (e) {
+          e.preventDefault();
+          showFallback('3D 그래픽 컨텍스트가 일시 중단되었습니다. 페이지를 새로고침 해주세요.');
+        });
+        canvas.addEventListener('webglcontextrestored', function () {
+          elFallback.classList.add('hidden');
+        });
+
+        var scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x090d16);
+        scene.fog = new THREE.FogExp2(0x090d16, 0.13);
+
+        if (typeof THREE.RoomEnvironment === 'function') {
+          var pmremGenerator = new THREE.PMREMGenerator(renderer);
+          var roomEnv = new THREE.RoomEnvironment();
+          scene.environment = pmremGenerator.fromScene(roomEnv, 0.04).texture;
+          roomEnv.dispose();
+          pmremGenerator.dispose();
+        }
+
+        var camera = new THREE.PerspectiveCamera(38, width / height, 0.05, 30);
+        camera.position.set(CAMERA_PRESETS[0].position[0], CAMERA_PRESETS[0].position[1], CAMERA_PRESETS[0].position[2]);
+
+        var controls = new THREE.OrbitControls(camera, canvas);
+        controls.target.set(CAMERA_PRESETS[0].target[0], CAMERA_PRESETS[0].target[1], CAMERA_PRESETS[0].target[2]);
+        controls.enableDamping = !isSoftwareGl;
+        controls.dampingFactor = 0.07;
+        controls.minDistance = 0.28;
+        controls.maxDistance = 4.2;
+        controls.maxPolarAngle = Math.PI * 0.54;
+        controls.minPolarAngle = 0.15;
+        controls.enablePan = true;
+        controls.update();
+
+        var cameraGoal = {
+          active: false,
+          target: new THREE.Vector3(),
+          position: new THREE.Vector3()
+        };
+
+        controls.addEventListener('start', function () {
+          cameraGoal.active = false;
+        });
+
+        // Studio 3-Point + Hemisphere Lighting
+        scene.add(new THREE.HemisphereLight(0xb8d4f4, 0x161d2e, 0.78));
+
+        var keyLight = new THREE.DirectionalLight(0xfff2e2, 1.85);
+        keyLight.position.set(1.8, 2.8, 2.2);
+        keyLight.castShadow = !isSoftwareGl;
+        keyLight.shadow.mapSize.width = 1024;
+        keyLight.shadow.mapSize.height = 1024;
+        keyLight.shadow.camera.near = 0.5;
+        keyLight.shadow.camera.far = 8;
+        keyLight.shadow.camera.left = -1.1;
+        keyLight.shadow.camera.right = 1.1;
+        keyLight.shadow.camera.top = 1.4;
+        keyLight.shadow.camera.bottom = -1.1;
+        keyLight.shadow.bias = -0.0005;
+        keyLight.shadow.normalBias = 0.02;
+        scene.add(keyLight);
+
+        var rimLight = new THREE.DirectionalLight(0x7ac7f8, 1.05);
+        rimLight.position.set(-2.0, 2.2, -1.8);
+        scene.add(rimLight);
+
+        var fillLight = new THREE.DirectionalLight(0xc2d8f0, 0.50);
+        fillLight.position.set(-1.6, 1.0, 1.5);
+        scene.add(fillLight);
+
+        var maxAniso = renderer.capabilities.getMaxAnisotropy();
+        var brainTex = createBrainGyriTexture(maxAniso);
+        var skinTex = createSkinTexture(maxAniso);
+        var textures = {
+          brainColor: brainTex.colorMap,
+          brainBump: brainTex.bumpMap,
+          skinColor: skinTex.colorMap,
+          skinBump: skinTex.bumpMap,
+          organicBump: createOrganicBumpTexture(maxAniso),
+          lungColor: createLungTexture(maxAniso),
+          plinthDial: createPlinthDialTexture(maxAnisotropyFallback(maxAniso)),
+          contactShadow: createContactShadowTexture()
+        };
+
+        function maxAnisotropyFallback(v) {
+          return v || 1;
+        }
+
+        var assets = buildAnatomyScene(textures, isSoftwareGl);
+        scene.add(assets.rootGroup);
+        if (!isSoftwareGl) {
+          renderer.compile(scene, camera);
+        }
+
+        // =========================================================================
+        // 6. VISUAL STATE SYNC & UI RENDERING
+        // =========================================================================
+        function applyVisualStates() {
+          assets.skinGroup.visible = state.shellMode === 'skin';
+          assets.vesselsGroup.visible = state.showVessels;
+
+          assets.organs.forEach(function (handle, id) {
+            var meta = ORGAN_MAP[id];
+            var inSystem = state.activeSystem === 'all' || (meta && meta.system === state.activeSystem);
+            var isSelected = state.selectedOrganId === id;
+            var isHovered = state.hoveredOrganId === id;
+
+            handle.materials.forEach(function (mat) {
+              if (isSelected) {
+                mat.emissive.setHex(id === 'skin' ? 0x2b3d4f : 0x1f5a85);
+                mat.emissiveIntensity = id === 'skin' ? 0.35 : 0.85;
+                mat.transparent = false;
+                mat.opacity = 1.0;
+                mat.depthWrite = true;
+              } else if (isHovered && inSystem) {
+                mat.emissive.setHex(id === 'skin' ? 0x1e2c3a : 0x163d5c);
+                mat.emissiveIntensity = id === 'skin' ? 0.22 : 0.55;
+                mat.transparent = false;
+                mat.opacity = 1.0;
+                mat.depthWrite = true;
+              } else if (!inSystem && id !== 'skin') {
+                mat.emissive.setHex(mat.userData.baseEmissiveHex || 0x000000);
+                mat.emissiveIntensity = 0;
+                mat.transparent = true;
+                mat.opacity = 0.14;
+                mat.depthWrite = false;
+              } else {
+                mat.emissive.setHex(mat.userData.baseEmissiveHex || 0x000000);
+                mat.emissiveIntensity = 0;
+                mat.transparent = false;
+                mat.opacity = 1.0;
+                mat.depthWrite = true;
+              }
+              mat.needsUpdate = true;
+            });
+          });
+        }
+
+        function focusCameraOnOrgan(organ) {
+          var useExplode = organ.id !== 'skin' && organ.id !== 'vessels' ? state.explodeAmount : 0;
+          var tx = organ.focusTarget[0] + organ.explodeOffset[0] * useExplode;
+          var ty = organ.focusTarget[1] + organ.explodeOffset[1] * useExplode;
+          var tz = organ.focusTarget[2] + organ.explodeOffset[2] * useExplode;
+          cameraGoal.target.set(tx, ty, tz);
+          cameraGoal.position.set(
+            tx + organ.focusCameraOffset[0],
+            ty + organ.focusCameraOffset[1],
+            tz + organ.focusCameraOffset[2]
+          );
+          cameraGoal.active = true;
+        }
+
+        function renderInspector() {
+          var organ = state.selectedOrganId ? ORGAN_MAP[state.selectedOrganId] : null;
+          if (!organ) {
+            elInspector.classList.add('hidden');
+            return;
+          }
+
+          elInspector.classList.remove('hidden');
+          document.getElementById('insp-swatch').style.backgroundColor = organ.accentHex;
+          document.getElementById('insp-system').textContent = organ.systemKo;
+          document.getElementById('insp-cavity').textContent = organ.cavityKo;
+          document.getElementById('insp-name-ko').textContent = organ.nameKo;
+          document.getElementById('insp-latin').textContent = organ.nameEn + ' / ' + organ.latinName;
+          document.getElementById('insp-summary').textContent = organ.summary;
+
+          var metricsEl = document.getElementById('insp-metrics');
+          metricsEl.innerHTML = '';
+          organ.metrics.forEach(function (m) {
+            var box = document.createElement('div');
+            var lbl = document.createElement('div');
+            lbl.className = 'metric-label';
+            lbl.textContent = m.label;
+            var val = document.createElement('div');
+            val.className = 'metric-value';
+            val.textContent = m.value;
+            box.appendChild(lbl);
+            box.appendChild(val);
+            metricsEl.appendChild(box);
+          });
+
+          var fnEl = document.getElementById('insp-functions');
+          fnEl.innerHTML = '';
+          organ.functions.forEach(function (fn, idx) {
+            var li = document.createElement('li');
+            li.className = 'fn-item';
+            var num = document.createElement('span');
+            num.className = 'fn-num';
+            num.textContent = String(idx + 1).padStart(2, '0') + '.';
+            var txt = document.createElement('span');
+            txt.textContent = fn;
+            li.appendChild(num);
+            li.appendChild(txt);
+            fnEl.appendChild(li);
+          });
+
+          var termsEl = document.getElementById('insp-terms');
+          termsEl.innerHTML = '';
+          organ.medicalTerms.forEach(function (t) {
+            var row = document.createElement('div');
+            row.className = 'term-row';
+            var head = document.createElement('div');
+            head.className = 'term-head';
+            var en = document.createElement('span');
+            en.className = 'term-en';
+            en.textContent = t.term;
+            var ko = document.createElement('span');
+            ko.className = 'term-ko';
+            ko.textContent = t.korean;
+            head.appendChild(en);
+            head.appendChild(ko);
+            var meaning = document.createElement('p');
+            meaning.className = 'term-meaning';
+            meaning.textContent = t.meaning;
+            row.appendChild(head);
+            row.appendChild(meaning);
+            termsEl.appendChild(row);
+          });
+
+          var relWrap = document.getElementById('insp-related-wrap');
+          var relEl = document.getElementById('insp-related');
+          relEl.innerHTML = '';
+          if (organ.relatedIds && organ.relatedIds.length > 0) {
+            relWrap.classList.remove('hidden');
+            organ.relatedIds.forEach(function (rid) {
+              var rel = ORGAN_MAP[rid];
+              if (!rel) return;
+              var btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'related-btn';
+              btn.textContent = rel.nameKo + ' →';
+              btn.addEventListener('click', function () {
+                selectOrgan(rid, true);
+              });
+              relEl.appendChild(btn);
+            });
+          } else {
+            relWrap.classList.add('hidden');
+          }
+
+          elInspScroll.scrollTop = 0;
+        }
+
+        function renderDirectory() {
+          var filtered =
+            state.activeSystem === 'all'
+              ? ORGANS
+              : ORGANS.filter(function (o) {
+                  return o.system === state.activeSystem;
+                });
+
+          elDirectoryCount.textContent = '장기 및 기관 목록 (' + filtered.length + ')';
+          elDirectoryGrid.innerHTML = '';
+
+          filtered.forEach(function (organ) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'dir-item' + (state.selectedOrganId === organ.id ? ' active' : '');
+            var sw = document.createElement('span');
+            sw.className = 'dot-swatch';
+            sw.style.backgroundColor = organ.accentHex;
+            var nm = document.createElement('span');
+            nm.className = 'dir-name';
+            nm.textContent = organ.nameKo;
+            btn.appendChild(sw);
+            btn.appendChild(nm);
+            btn.addEventListener('click', function () {
+              state.directoryOpen = false;
+              elDirectoryPopover.classList.add('hidden');
+              selectOrgan(organ.id, true);
+            });
+            elDirectoryGrid.appendChild(btn);
+          });
+        }
+
+        function updateDockControls() {
+          var sysBtns = elSystemFilters.querySelectorAll('.sys-btn');
+          sysBtns.forEach(function (b) {
+            b.classList.toggle('active', b.getAttribute('data-sys') === state.activeSystem);
+          });
+
+          var segBtns = document.querySelectorAll('.seg-btn');
+          segBtns.forEach(function (b) {
+            b.classList.toggle('active', b.getAttribute('data-shell') === state.shellMode);
+          });
+
+          elBtnVessels.classList.toggle('active-rose', state.showVessels);
+          elBtnVessels.setAttribute('aria-pressed', String(state.showVessels));
+
+          elBtnSkeleton.classList.toggle('active-sky', state.showSkeleton);
+          elBtnSkeleton.setAttribute('aria-pressed', String(state.showSkeleton));
+
+          var dirBtn = document.getElementById('dir-trigger-btn');
+          if (dirBtn) dirBtn.classList.toggle('active', state.directoryOpen);
+
+          elDirectoryPopover.classList.toggle('hidden', state.dockCollapsed || !state.directoryOpen);
+          elDockPanel.classList.toggle('collapsed', state.dockCollapsed);
+          elDockToggle.setAttribute('aria-expanded', String(!state.dockCollapsed));
+          elDockToggleLabel.textContent = state.dockCollapsed ? '컨트롤 보기' : '컨트롤 숨기기';
+          elDockChevron.innerHTML = state.dockCollapsed
+            ? '<polyline points="18 15 12 9 6 15"></polyline>'
+            : '<polyline points="6 9 12 15 18 9"></polyline>';
+        }
+
+        function selectOrgan(organId, shouldFocusCamera) {
+          state.selectedOrganId = organId;
+          if (organId === 'skin') {
+            state.shellMode = 'skin';
+          } else if (organId && state.shellMode === 'skin' && !SURFACE_VISIBLE_IDS[organId]) {
+            state.shellMode = 'xray';
+          }
+          if (organId === 'vessels') {
+            state.showVessels = true;
+          }
+          applyVisualStates();
+          updateDockControls();
+          renderDirectory();
+          renderInspector();
+          if (shouldFocusCamera && organId && ORGAN_MAP[organId]) {
+            focusCameraOnOrgan(ORGAN_MAP[organId]);
+          }
+        }
+
+        // Build System Filter Buttons + Directory Trigger
+        SYSTEM_FILTERS.forEach(function (sys) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'sys-btn' + (sys.id === 'all' ? ' active' : '');
+          btn.setAttribute('data-sys', sys.id);
+          btn.textContent = sys.labelKo;
+          btn.addEventListener('click', function () {
+            state.activeSystem = sys.id;
+            if (sys.id === 'cardiovascular') {
+              state.showVessels = true;
+              if (state.shellMode === 'skin') state.shellMode = 'xray';
+            } else if (sys.id !== 'all' && sys.id !== 'sensory' && state.shellMode === 'skin') {
+              state.shellMode = 'xray';
+            }
+            if (state.selectedOrganId) {
+              var cur = ORGAN_MAP[state.selectedOrganId];
+              if (cur && sys.id !== 'all' && cur.system !== sys.id) {
+                state.selectedOrganId = null;
+              }
+            }
+            applyVisualStates();
+            updateDockControls();
+            renderDirectory();
+            renderInspector();
+          });
+          elSystemFilters.appendChild(btn);
+        });
+
+        var divider = document.createElement('div');
+        divider.className = 'dock-divider';
+        elSystemFilters.appendChild(divider);
+
+        var dirBtn = document.createElement('button');
+        dirBtn.id = 'dir-trigger-btn';
+        dirBtn.type = 'button';
+        dirBtn.className = 'dir-trigger';
+        dirBtn.innerHTML =
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg><span>기관 목록</span>';
+        dirBtn.addEventListener('click', function () {
+          state.directoryOpen = !state.directoryOpen;
+          renderDirectory();
+          updateDockControls();
+        });
+        elSystemFilters.appendChild(dirBtn);
+
+        // Build Camera Preset Buttons
+        CAMERA_PRESETS.forEach(function (preset) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'preset-btn';
+          btn.textContent = preset.labelKo;
+          btn.addEventListener('click', function () {
+            if (preset.id === 'full') {
+              selectOrgan(null, false);
+            }
+            cameraGoal.target.set(preset.target[0], preset.target[1], preset.target[2]);
+            cameraGoal.position.set(preset.position[0], preset.position[1], preset.position[2]);
+            cameraGoal.active = true;
+          });
+          elCameraPresets.appendChild(btn);
+        });
+
+        // Wire Controls
+        elExplodeSlider.addEventListener('input', function (e) {
+          var pct = Number(e.target.value);
+          state.explodeAmount = pct / 100;
+          elExplodeVal.textContent = pct + '%';
+        });
+
+        document.querySelectorAll('.seg-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var mode = btn.getAttribute('data-shell');
+            state.shellMode = mode;
+            if (mode !== 'skin' && state.selectedOrganId === 'skin') {
+              state.selectedOrganId = null;
+              renderInspector();
+            }
+            applyVisualStates();
+            updateDockControls();
+          });
+        });
+
+        elBtnVessels.addEventListener('click', function () {
+          state.showVessels = !state.showVessels;
+          if (!state.showVessels && state.selectedOrganId === 'vessels') {
+            state.selectedOrganId = null;
+            renderInspector();
+          }
+          applyVisualStates();
+          updateDockControls();
+        });
+
+        elBtnSkeleton.addEventListener('click', function () {
+          state.showSkeleton = !state.showSkeleton;
+          updateDockControls();
+        });
+
+        elDockToggle.addEventListener('click', function () {
+          state.dockCollapsed = !state.dockCollapsed;
+          updateDockControls();
+        });
+
+        document.getElementById('directory-close').addEventListener('click', function () {
+          state.directoryOpen = false;
+          updateDockControls();
+        });
+
+        document.getElementById('btn-close-inspector').addEventListener('click', function () {
+          selectOrgan(null, false);
+        });
+
+        document.getElementById('btn-focus').addEventListener('click', function () {
+          if (state.selectedOrganId && ORGAN_MAP[state.selectedOrganId]) {
+            focusCameraOnOrgan(ORGAN_MAP[state.selectedOrganId]);
+          }
+        });
+
+        window.addEventListener('keydown', function (e) {
+          if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+          if (e.key === 'Escape') {
+            selectOrgan(null, false);
+          } else if (e.key === 'h' || e.key === 'H') {
+            state.dockCollapsed = !state.dockCollapsed;
+            updateDockControls();
+          }
+        });
+
+        // Optional clean ZIP download when served over HTTP(S) and archive exists
+        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+          fetch('./anatomia-3d-singlefile.zip', { method: 'HEAD', cache: 'no-store' })
+            .then(function (res) {
+              var ctype = (res.headers.get('content-type') || '').toLowerCase();
+              if (res.ok && ctype.indexOf('text/html') === -1) {
+                elDownloadBtn.classList.remove('hidden');
+              }
+            })
+            .catch(function () {});
+
+          elDownloadBtn.addEventListener('click', function () {
+            elDownloadBtn.disabled = true;
+            fetch('./anatomia-3d-singlefile.zip', { cache: 'no-store', credentials: 'same-origin' })
+              .then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.arrayBuffer();
+              })
+              .then(function (buffer) {
+                var bytes = new Uint8Array(buffer);
+                var hasHeader = bytes.length > 22 && bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
+                if (!hasHeader) throw new Error('Invalid ZIP');
+                var blob = new Blob([buffer], { type: 'application/zip' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'anatomia-3d-singlefile.zip';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+              })
+              .catch(function () {})
+              .finally(function () {
+                elDownloadBtn.disabled = false;
+              });
+          });
+        }
+
+        renderDirectory();
+        updateDockControls();
+        applyVisualStates();
+
+        // =========================================================================
+        // 7. RAYCASTING & MULTI-TOUCH SAFE POINTER HANDLING
+        // =========================================================================
+        var raycaster = new THREE.Raycaster();
+        var pointerVec = new THREE.Vector2();
+        var activePointers = new Map();
+        var wasMultiTouch = false;
+        var lastHoverCheck = 0;
+
+        function isHierarchyVisible(obj) {
+          var curr = obj;
+          while (curr) {
+            if (!curr.visible) return false;
+            curr = curr.parent;
+          }
+          return true;
+        }
+
+        function pickOrgan(clientX, clientY) {
+          var rect = canvas.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) return null;
+          pointerVec.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+          pointerVec.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+          raycaster.setFromCamera(pointerVec, camera);
+          var rawHits = raycaster.intersectObjects(assets.raycastTargets, false);
+          var hits = rawHits.filter(function (h) {
+            return isHierarchyVisible(h.object);
+          });
+          if (hits.length === 0) return null;
+
+          for (var i = 0; i < hits.length; i++) {
+            var oid = hits[i].object.userData && hits[i].object.userData.organId;
+            if (!oid) continue;
+            var meta = ORGAN_MAP[oid];
+            if (state.activeSystem === 'all' || (meta && meta.system === state.activeSystem)) {
+              return oid;
+            }
+          }
+          return (hits[0].object.userData && hits[0].object.userData.organId) || null;
+        }
+
+        canvas.addEventListener('pointerdown', function (e) {
+          if (e.pointerType === 'mouse' && e.button !== 0) return;
+          activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (activePointers.size > 1) wasMultiTouch = true;
+        });
+
+        canvas.addEventListener('pointerup', function (e) {
+          var start = activePointers.get(e.pointerId);
+          activePointers.delete(e.pointerId);
+          if (activePointers.size === 0) {
+            var multi = wasMultiTouch;
+            wasMultiTouch = false;
+            if (multi || !start) return;
+            var dx = e.clientX - start.x;
+            var dy = e.clientY - start.y;
+            if (dx * dx + dy * dy > 42) return;
+            selectOrgan(pickOrgan(e.clientX, e.clientY), false);
+          }
+        });
+
+        canvas.addEventListener('pointercancel', function (e) {
+          activePointers.delete(e.pointerId);
+          if (activePointers.size === 0) wasMultiTouch = false;
+        });
+
+        canvas.addEventListener('pointermove', function (e) {
+          if (e.pointerType === 'touch') return;
+          var now = performance.now();
+          if (now - lastHoverCheck < 40) return;
+          lastHoverCheck = now;
+
+          var hovered = pickOrgan(e.clientX, e.clientY);
+          if (hovered !== state.hoveredOrganId) {
+            state.hoveredOrganId = hovered;
+            applyVisualStates();
+          }
+          canvas.style.cursor = hovered ? 'pointer' : 'grab';
+
+          var hoverMeta = hovered ? ORGAN_MAP[hovered] : null;
+          if (hoverMeta) {
+            elTooltipSwatch.style.backgroundColor = hoverMeta.accentHex;
+            elTooltipKo.textContent = hoverMeta.nameKo;
+            elTooltipEn.textContent = hoverMeta.nameEn;
+            elTooltip.style.left = Math.min(e.clientX + 14, window.innerWidth - 220) + 'px';
+            elTooltip.style.top = Math.max(e.clientY - 42, 12) + 'px';
+            elTooltip.classList.remove('hidden');
+          } else {
+            elTooltip.classList.add('hidden');
+          }
+        });
+
+        canvas.addEventListener('pointerleave', function () {
+          activePointers.clear();
+          wasMultiTouch = false;
+          if (state.hoveredOrganId !== null) {
+            state.hoveredOrganId = null;
+            applyVisualStates();
+          }
+          canvas.style.cursor = 'grab';
+          elTooltip.classList.add('hidden');
+        });
+
+        // =========================================================================
+        // 8. RESIZE & PACED ANIMATION LOOP
+        // =========================================================================
+        function handleResize() {
+          var w = elViewport.clientWidth || window.innerWidth;
+          var h = elViewport.clientHeight || window.innerHeight;
+          if (w === 0 || h === 0) return;
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w, h);
+        }
+        window.addEventListener('resize', handleResize);
+        if (typeof ResizeObserver !== 'undefined') {
+          new ResizeObserver(handleResize).observe(elViewport);
+        }
+
+        var clock = new THREE.Clock();
+        var currentExplode = 0;
+        var currentShellOpacity = isSoftwareGl ? 0.16 : 0.2;
+        var currentSkelOpacity = 0.34;
+        var tempVec = new THREE.Vector3();
+
+        function afterDraw(cb) {
+          var gl = renderer.getContext();
+          if (!gl || typeof gl.fenceSync !== 'function') {
+            setTimeout(cb, 80);
+            return;
+          }
+          var sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+          if (!sync) {
+            setTimeout(cb, 80);
+            return;
+          }
+          gl.flush();
+          function poll() {
+            var st = gl.getSyncParameter(sync, gl.SYNC_STATUS);
+            if (st === gl.UNSIGNALED) {
+              setTimeout(poll, 5);
+            } else {
+              gl.deleteSync(sync);
+              setTimeout(cb, 80);
+            }
+          }
+          setTimeout(poll, 5);
+        }
+
+        function tick() {
+          var delta = Math.min(clock.getDelta(), 0.1);
+          var elapsed = clock.getElapsedTime();
+
+          currentExplode = THREE.MathUtils.damp(currentExplode, state.explodeAmount, 7.5, delta);
+          assets.organs.forEach(function (handle) {
+            if (handle.id === 'skin' || handle.id === 'vessels') return;
+            tempVec.copy(handle.basePosition).addScaledVector(handle.explodeOffset, currentExplode);
+            handle.group.position.copy(tempVec);
+          });
+
+          var targetShell = state.shellMode === 'xray' ? (isSoftwareGl ? 0.16 : 0.2) : 0.0;
+          currentShellOpacity = THREE.MathUtils.damp(currentShellOpacity, targetShell, 8, delta);
+          assets.shellGroup.visible = currentShellOpacity > 0.008;
+          assets.shellMat.opacity = currentShellOpacity;
+
+          var targetSkel = state.showSkeleton ? 0.34 : 0.0;
+          currentSkelOpacity = THREE.MathUtils.damp(currentSkelOpacity, targetSkel, 8, delta);
+          assets.skeletonGroup.visible = currentSkelOpacity > 0.008;
+          assets.boneMat.opacity = currentSkelOpacity;
+
+          var beatPhase = (elapsed * 1.2) % 1;
+          var systole =
+            Math.exp(-Math.pow((beatPhase - 0.16) / 0.06, 2)) * 0.048 +
+            Math.exp(-Math.pow((beatPhase - 0.32) / 0.08, 2)) * 0.022;
+          assets.heartGroup.scale.setScalar(1 + systole);
+
+          var breath = (Math.sin(elapsed * 1.55) * 0.5 + 0.5) * 0.028;
+          assets.lungsGroup.scale.set(1 + breath, 1 + breath * 0.65, 1 + breath * 1.15);
+
+          if (cameraGoal.active) {
+            var df = 6.5;
+            controls.target.x = THREE.MathUtils.damp(controls.target.x, cameraGoal.target.x, df, delta);
+            controls.target.y = THREE.MathUtils.damp(controls.target.y, cameraGoal.target.y, df, delta);
+            controls.target.z = THREE.MathUtils.damp(controls.target.z, cameraGoal.target.z, df, delta);
+            camera.position.x = THREE.MathUtils.damp(camera.position.x, cameraGoal.position.x, df, delta);
+            camera.position.y = THREE.MathUtils.damp(camera.position.y, cameraGoal.position.y, df, delta);
+            camera.position.z = THREE.MathUtils.damp(camera.position.z, cameraGoal.position.z, df, delta);
+            if (controls.target.distanceTo(cameraGoal.target) + camera.position.distanceTo(cameraGoal.position) < 0.008) {
+              cameraGoal.active = false;
+            }
+          }
+
+          controls.update();
+          renderer.render(scene, camera);
+
+          if (isSoftwareGl) afterDraw(tick);
+          else requestAnimationFrame(tick);
+        }
+
+        if (isSoftwareGl) {
+          renderer.render(scene, camera);
+          afterDraw(tick);
+        } else {
+          requestAnimationFrame(tick);
+        }
+      })();
+    </script>
+  </body>
+</html>
